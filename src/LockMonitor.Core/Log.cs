@@ -8,7 +8,7 @@ namespace LockMonitor;
 /// Writes only on rare events, never per sample, and caps the file at 512 KB.
 /// In a packaged app %LOCALAPPDATA% is redirected into the package's LocalCache folder.
 /// </summary>
-internal static class Log
+public static class Log
 {
     private const long MaxBytes = 512 * 1024;
     private static readonly Lock Gate = new();

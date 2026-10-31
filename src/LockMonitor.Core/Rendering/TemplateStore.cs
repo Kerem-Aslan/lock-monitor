@@ -1,5 +1,4 @@
 using System.Text.Json.Nodes;
-using Microsoft.Windows.Widgets;
 
 namespace LockMonitor.Rendering;
 
@@ -9,20 +8,20 @@ namespace LockMonitor.Rendering;
 /// <c>$when: ${$host.widgetSize=="..."}</c>, so the host can redraw immediately when the user
 /// resizes the widget, before the provider sends new data.
 /// </summary>
-internal sealed class TemplateStore
+public sealed class TemplateStore
 {
-    private static readonly (WidgetSize Size, string Name)[] Sizes =
+    private static readonly (CardSize Size, string Name)[] Sizes =
     [
-        (WidgetSize.Small, "small"),
-        (WidgetSize.Medium, "medium"),
-        (WidgetSize.Large, "large"),
+        (CardSize.Small, "small"),
+        (CardSize.Medium, "medium"),
+        (CardSize.Large, "large"),
     ];
 
     public string Composed { get; }
 
-    public IReadOnlySet<WidgetSize> AvailableSizes { get; }
+    public IReadOnlySet<CardSize> AvailableSizes { get; }
 
-    private TemplateStore(string composed, IReadOnlySet<WidgetSize> sizes)
+    private TemplateStore(string composed, IReadOnlySet<CardSize> sizes)
     {
         Composed = composed;
         AvailableSizes = sizes;
@@ -30,7 +29,7 @@ internal sealed class TemplateStore
 
     public static TemplateStore LoadFrom(string directory)
     {
-        var sources = new Dictionary<WidgetSize, string>();
+        var sources = new Dictionary<CardSize, string>();
         foreach (var (size, name) in Sizes)
         {
             var path = Path.Combine(directory, name + ".json");
@@ -42,7 +41,7 @@ internal sealed class TemplateStore
         return FromSources(sources);
     }
 
-    public static TemplateStore FromSources(IReadOnlyDictionary<WidgetSize, string> sources)
+    public static TemplateStore FromSources(IReadOnlyDictionary<CardSize, string> sources)
     {
         if (sources.Count == 0)
         {

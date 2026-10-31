@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Sensors, sampling and card rendering. No Windows App SDK dependency, so it can be unit tested
+       and reused by the probe tool without packaging. -->
+  <PropertyGroup>
+    <TargetFramework>$(LockMonitorTfm)</TargetFramework>
+    <RootNamespace>LockMonitor</RootNamespace>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LockMonitor.Core.Tests" />
+  </ItemGroup>
+
+</Project>

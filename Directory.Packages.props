@@ -8,8 +8,6 @@
     <PackageVersion Include="Microsoft.Windows.CsWinRT" Version="2.3.1" />
     <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2957" />
     <PackageVersion Include="Microsoft.Windows.SDK.BuildTools.MSIX" Version="1.7.261008100" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="xunit.v3" Version="4.0.2" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
   </ItemGroup>
 </Project>

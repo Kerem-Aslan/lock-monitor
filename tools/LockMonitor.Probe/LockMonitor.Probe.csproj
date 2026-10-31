@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Console tool: reads every sensor without the widget host and reports values and cost. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(LockMonitorTfm)</TargetFramework>
+    <RootNamespace>LockMonitor.Probe</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LockMonitor.Core\LockMonitor.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,12 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- WinExe: no console window pops up when the widget host activates the COM server.
-         The "dump" diagnostic mode attaches to the parent console instead. -->
+    <!-- WinExe: no console window pops up when the widget host activates the COM server. -->
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
-    <TargetPlatformMinVersion>10.0.22621.0</TargetPlatformMinVersion>
-    <SupportedOSPlatformVersion>10.0.22621.0</SupportedOSPlatformVersion>
+    <TargetFramework>$(LockMonitorTfm)</TargetFramework>
     <RootNamespace>LockMonitor</RootNamespace>
     <AssemblyName>LockMonitor.Widget</AssemblyName>
     <Platforms>x64;ARM64</Platforms>
@@ -29,10 +26,6 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
     <IsAotCompatible>true</IsAotCompatible>
-    <!-- The .NET SDK defaults to an older Windows projection (10.0.26100.57) whose CsWinRT source
-         generator emits no WinRT vtables for WidgetProvider, so under Native AOT the provider
-         answered E_NOINTERFACE for IWidgetProvider. Pin a current projection. -->
-    <WindowsSdkPackageVersion>10.0.26100.87</WindowsSdkPackageVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -41,6 +34,10 @@
     <Content Include="Assets\**\*.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="ProviderAssets\**\*.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Public\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LockMonitor.Core\LockMonitor.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

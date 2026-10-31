@@ -4,6 +4,7 @@ using LockMonitor.Com;
 using LockMonitor.Native;
 using LockMonitor.Provider;
 using LockMonitor.Rendering;
+using LockMonitor.Sensors;
 
 namespace LockMonitor;
 
@@ -34,7 +35,7 @@ internal static class Program
 
         using var lifetime = new ServerLifetime(TimeSpan.FromSeconds(30));
         var templates = TemplateStore.LoadFrom(Path.Combine(AppContext.BaseDirectory, "Templates"));
-        var provider = new WidgetProvider(lifetime, templates);
+        var provider = new WidgetProvider(lifetime, templates, SensorCatalog.CreateAll());
         var factory = new WidgetProviderFactory(() => provider);
 
         // Restore pinned widgets before the host can reach us, so recovery and host callbacks
@@ -73,6 +74,7 @@ internal static class Program
             GC.KeepAlive(factory);
         }
 
+        provider.DisposeAsync().AsTask().GetAwaiter().GetResult();
         Log.Info("COM server stopped");
         return 0;
     }

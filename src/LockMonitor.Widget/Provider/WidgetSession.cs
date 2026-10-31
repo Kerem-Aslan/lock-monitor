@@ -1,3 +1,4 @@
+using LockMonitor.Sampling;
 using Microsoft.Windows.Widgets;
 
 namespace LockMonitor.Provider;
@@ -10,6 +11,9 @@ internal sealed class WidgetSession(string id, string definitionId)
     public WidgetSize Size { get; set; } = WidgetSize.Small;
     public bool IsActive { get; set; }
 
+    /// <summary>Requested update interval. Phase 3 reads it from CustomState (user setting).</summary>
+    public TimeSpan Interval { get; set; } = SamplingPlan.DefaultInterval;
+
     /// <summary>Per-widget settings, persisted by the widget host as CustomState (JSON).</summary>
     public string CustomState { get; set; } = string.Empty;
 
@@ -18,6 +22,10 @@ internal sealed class WidgetSession(string id, string definitionId)
 
     /// <summary>True when the host must receive the template again (create, activate, resize).</summary>
     public bool NeedsTemplate { get; set; } = true;
+
+    // Diagnostics for the lifecycle log
+    public long ActiveSince { get; set; }
+    public int UpdatesWhileActive { get; set; }
 
     public override string ToString() => $"{Id} ({DefinitionId}, {Size}, {(IsActive ? "active" : "inactive")})";
 }

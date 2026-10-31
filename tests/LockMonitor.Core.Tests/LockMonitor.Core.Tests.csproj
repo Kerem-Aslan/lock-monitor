@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(LockMonitorTfm)</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <RootNamespace>LockMonitor.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LockMonitor.Core\LockMonitor.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Test against the real templates shipped in the widget package -->
+    <None Include="..\..\src\LockMonitor.Widget\Templates\*.json" LinkBase="Templates" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
