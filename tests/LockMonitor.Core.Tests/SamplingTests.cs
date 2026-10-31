@@ -165,6 +165,21 @@ public class SamplingSchedulerTests
         Assert.True(small.IsOpen);
     }
 
+    [Fact]
+    public async Task Slow_sensor_value_read_during_priming_is_kept_in_published_snapshots()
+    {
+        // Regression: the disk (read every 30 s) showed N/A because its priming read was discarded.
+        var disk = new FakeSensor { Refresh = TimeSpan.FromSeconds(30), Field = Field.Memory };
+        SystemSnapshot? first = null;
+        await using var scheduler = new SamplingScheduler([disk], s => Interlocked.CompareExchange(ref first, s, null));
+
+        scheduler.Apply(new SamplingPlan(true, CardSize.Small, Fast));
+        await WaitUntil(() => Volatile.Read(ref first) is not null);
+
+        Assert.Equal(42, first!.MemoryPercent);
+        Assert.Equal(1, disk.SampleCalls);
+    }
+
     private static async Task WaitUntil(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);

@@ -168,9 +168,9 @@ public class TemplateStoreTests
         var body = root["body"]!.AsArray();
         Assert.Equal(4, body.Count);
 
-        Assert.Equal("""${$host.widgetSize=="small" && $host.isUserContextAuthenticated != false}""", (string?)body[0]!["$when"]);
+        Assert.Equal("""${$host.widgetSize=="small" && $host.isUserContextAuthenticated != false && exists(metrics)}""", (string?)body[0]!["$when"]);
         Assert.Equal(TemplateStore.OpenTaskManagerVerb, (string?)body[0]!["selectAction"]!["verb"]);
-        Assert.Equal("""${$host.widgetSize=="small" && $host.isUserContextAuthenticated == false}""", (string?)body[1]!["$when"]);
+        Assert.Equal("""${$host.widgetSize=="small" && $host.isUserContextAuthenticated == false && exists(metrics)}""", (string?)body[1]!["$when"]);
         Assert.Null(body[1]!["selectAction"]);
         Assert.StartsWith("""${$host.widgetSize=="large" """.TrimEnd(), (string?)body[2]!["$when"]);
         Assert.Equal("TextBlock", (string?)body[0]!["items"]![0]!["type"]);

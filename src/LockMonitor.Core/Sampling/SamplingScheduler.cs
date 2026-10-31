@@ -29,6 +29,13 @@ public sealed class SamplingScheduler : IAsyncDisposable
     private SamplingPlan _plan = SamplingPlan.Idle;
     private SystemSnapshot? _latest;
 
+    /// <summary>
+    /// Last sampled snapshot, including unpublished priming samples. New samples start from it so
+    /// that slow sensors (e.g. the disk, read every 30 s) keep a value read during priming.
+    /// Only the loop touches it.
+    /// </summary>
+    private SystemSnapshot? _working;
+
     public SamplingScheduler(IEnumerable<ISensor> sensors, Action<SystemSnapshot> publish, TimeProvider? time = null)
     {
         _time = time ?? TimeProvider.System;
@@ -121,7 +128,7 @@ public sealed class SamplingScheduler : IAsyncDisposable
 
     private SystemSnapshot Sample(SamplingPlan plan)
     {
-        var snapshot = Latest?.Clone() ?? new SystemSnapshot();
+        var snapshot = (_working ?? Latest)?.Clone() ?? new SystemSnapshot();
         snapshot.Timestamp = _time.GetUtcNow();
         foreach (var runner in _runners)
         {
@@ -136,6 +143,7 @@ public sealed class SamplingScheduler : IAsyncDisposable
             }
         }
         Interlocked.Increment(ref _tickCount);
+        _working = snapshot;
         return snapshot;
     }
 

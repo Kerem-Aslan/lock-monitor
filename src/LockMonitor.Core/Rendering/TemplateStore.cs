@@ -71,7 +71,7 @@ public sealed class TemplateStore
             body.Add((JsonNode)new JsonObject
             {
                 ["type"] = "Container",
-                ["$when"] = $"${{{sizeCheck} && $host.isUserContextAuthenticated != false}}",
+                ["$when"] = $"${{{sizeCheck} && $host.isUserContextAuthenticated != false && {HasCardData}}}",
                 ["selectAction"] = new JsonObject { ["type"] = "Action.Execute", ["verb"] = OpenTaskManagerVerb },
                 ["items"] = items.DeepClone(),
             });
@@ -79,7 +79,7 @@ public sealed class TemplateStore
             body.Add((JsonNode)new JsonObject
             {
                 ["type"] = "Container",
-                ["$when"] = $"${{{sizeCheck} && $host.isUserContextAuthenticated == false}}",
+                ["$when"] = $"${{{sizeCheck} && $host.isUserContextAuthenticated == false && {HasCardData}}}",
                 ["items"] = items.DeepClone(),
             });
         }
@@ -89,6 +89,14 @@ public sealed class TemplateStore
     }
 
     public const string OpenTaskManagerVerb = "openTaskManager";
+
+    /// <summary>
+    /// Draw the card only when card data is bound. The host briefly pairs the card template with
+    /// other data (e.g. the settings card's) when entering/leaving customization; without this
+    /// guard unbound expressions such as "${label}" flash on screen. Verified with
+    /// adaptivecards-templating 2.3.1: exists() is false for missing data, true otherwise.
+    /// </summary>
+    public const string HasCardData = "exists(metrics)";
 
     /// <summary>The settings card (Templates\settings.json), shown while the user customizes a widget.</summary>
     public string? Settings { get; private init; }

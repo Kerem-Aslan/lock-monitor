@@ -5,7 +5,7 @@ using LockMonitor.Sampling;
 using LockMonitor.Sensors;
 
 // Usage: LockMonitor.Probe [--interval <seconds>] [--seconds <duration>] [--size small|medium|large]
-//                          [--no-gpu-temp] [--json]
+//                          [--no-gpu-temp] [--json] [--write-cards <dir>] [--templates <dir>]
 // Reads the widget's sensors the same way the provider does and prints values plus the cost of
 // each sensor, so data sources can be checked and measured without deploying the widget.
 // --json also prints the card data the widget would send for the last sample.
@@ -15,6 +15,8 @@ double durationSeconds = 20;
 var size = CardSize.Large;
 bool gpuTemperature = true;
 bool json = false;
+string? cardsDir = null;
+string templatesDir = Path.Combine("src", "LockMonitor.Widget", "Templates");
 for (int i = 0; i < args.Length; i++)
 {
     switch (args[i])
@@ -24,6 +26,8 @@ for (int i = 0; i < args.Length; i++)
         case "--size": size = Enum.Parse<CardSize>(args[++i], ignoreCase: true); break;
         case "--no-gpu-temp": gpuTemperature = false; break;
         case "--json": json = true; break;
+        case "--write-cards": cardsDir = args[++i]; break;
+        case "--templates": templatesDir = args[++i]; break;
     }
 }
 
@@ -100,6 +104,25 @@ if (json)
 {
     Console.WriteLine();
     Console.WriteLine(CardData.Build(snapshot, size, new CardOptions(null, gpuTemperature)));
+}
+
+if (cardsDir is not null)
+{
+    // Real templates + data from this sample, for tools/template-check (expands them with the
+    // official Adaptive Cards templating engine).
+    var store = TemplateStore.LoadFrom(templatesDir);
+    Directory.CreateDirectory(cardsDir);
+    File.WriteAllText(Path.Combine(cardsDir, "template-card.json"), store.Composed);
+    File.WriteAllText(Path.Combine(cardsDir, "template-settings.json"), store.Settings ?? "{}");
+    foreach (var s in Enum.GetValues<CardSize>())
+    {
+        File.WriteAllText(Path.Combine(cardsDir, $"data-{s.ToString().ToLowerInvariant()}.json"),
+            CardData.Build(snapshot, s, new CardOptions(null, gpuTemperature)));
+    }
+    File.WriteAllText(Path.Combine(cardsDir, "data-pending.json"), CardData.Build(null, CardSize.Large));
+    File.WriteAllText(Path.Combine(cardsDir, "data-settings.json"),
+        SettingsCard.BuildData(WidgetSettings.Default, adapters.Adapters, adapters.Default));
+    Console.WriteLine($"Wrote templates and sample data to {Path.GetFullPath(cardsDir)}");
 }
 
 foreach (var r in runners)

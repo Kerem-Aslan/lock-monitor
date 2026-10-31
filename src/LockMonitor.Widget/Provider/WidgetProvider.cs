@@ -26,8 +26,11 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
     private const string SaveSettingsVerb = "saveSettings";
     private const string CancelSettingsVerb = "cancelSettings";
 
-    /// <summary>A cached reading older than this is not shown when a widget becomes active.</summary>
-    private static readonly TimeSpan StaleAfter = TimeSpan.FromSeconds(10);
+    /// <summary>
+    /// A cached reading older than this is not shown when a widget becomes active. The board is
+    /// often open for only a few seconds, so recent values beat "--" until the next sample (~1 s).
+    /// </summary>
+    private static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(10);
 
     private readonly Lock _gate = new();
     private readonly Dictionary<string, WidgetSession> _sessions = new(StringComparer.Ordinal);

@@ -8,3 +8,4 @@ BundleArtifacts/
 *.pfx
 TestResults/
 artifacts/
+node_modules/

@@ -1,0 +1,13 @@
+{
+  "name": "lock-monitor-template-check",
+  "private": true,
+  "description": "Expands the widget templates with the official Adaptive Cards templating engine and checks the result.",
+  "type": "module",
+  "scripts": {
+    "check": "node check.mjs"
+  },
+  "dependencies": {
+    "adaptive-expressions": "4.23.3",
+    "adaptivecards-templating": "2.3.1"
+  }
+}
