@@ -127,6 +127,7 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
         {
             session.Size = widgetContext.Size;
             session.NeedsTemplate = true;
+            MarkFlyoutShown(session);
         }
         SetActive(session.Id, true, $"size={widgetContext.Size}");
         StateChanged();
@@ -136,15 +137,17 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
     public void Deactivate(string widgetId)
     {
         // The settings flyout can be closed with its X button, which sends no action: the host just
-        // deactivates the flyout and re-activates the widget at its real size. Treat a deactivation
-        // during customization as "closed without saving", otherwise the widget itself would keep
-        // showing the settings card. (Save/Cancel arrive as actions before this.)
+        // deactivates the flyout and re-activates the widget at its real size. A deactivation while
+        // the flyout is showing therefore means "closed without saving"; otherwise the widget itself
+        // would keep showing the settings card. A deactivation before the flyout was activated only
+        // hides the board card (the host sends it right after OnCustomizationRequested when the
+        // widget was active) and must not end customization. Save/Cancel arrive as actions earlier.
         bool closedWithoutSaving = false;
         lock (_gate)
         {
-            if (_sessions.TryGetValue(widgetId, out var session) && session.InCustomization)
+            if (_sessions.TryGetValue(widgetId, out var session) && session.Customization == CustomizationState.Showing)
             {
-                session.InCustomization = false;
+                session.Customization = CustomizationState.None;
                 session.NeedsTemplate = true;
                 closedWithoutSaving = true;
             }
@@ -183,7 +186,7 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
                     {
                         session.Settings = session.Settings.WithInputs(actionInvokedArgs.Data);
                     }
-                    session.InCustomization = false;
+                    session.Customization = CustomizationState.None;
                     session.NeedsTemplate = true;
                 }
                 if (verb == SaveSettingsVerb)
@@ -205,6 +208,10 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
         {
             session.Size = context.Size;
             session.NeedsTemplate = true;
+            if (context.IsActive)
+            {
+                MarkFlyoutShown(session);
+            }
         }
         SetActive(session.Id, context.IsActive, "context changed");
         StateChanged();
@@ -223,11 +230,20 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
         Log.Info($"OnCustomizationRequested {session.Id}");
         lock (_gate)
         {
-            session.InCustomization = true;
+            session.Customization = CustomizationState.Requested;
             session.NeedsTemplate = true;
         }
         StateChanged();
         Push(session, null);
+    }
+
+    /// <summary>An activation after OnCustomizationRequested is the settings flyout appearing.</summary>
+    private static void MarkFlyoutShown(WidgetSession session)
+    {
+        if (session.Customization == CustomizationState.Requested)
+        {
+            session.Customization = CustomizationState.Showing;
+        }
     }
 
     // ----- sampling --------------------------------------------------------------------------

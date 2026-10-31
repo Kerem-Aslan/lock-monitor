@@ -28,15 +28,45 @@ public sealed class TopProcessesSensor(TimeProvider? time = null) : ISensor
     /// far more than every other sensor together, and a top-3 list does not need second-by-second
     /// updates: refresh every 5 s (the list then shows the average over those 5 s).
     /// </summary>
-    public TimeSpan RefreshInterval => TimeSpan.FromSeconds(5);
+    public TimeSpan RefreshInterval => TimeSpan.Zero; // paced here, see Sample
+
+    private static readonly TimeSpan Refresh = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan MinWindow = TimeSpan.FromSeconds(1);
+    private IReadOnlyList<ProcessUsage>? _last;
+    private long _lastRead;
 
     public void Open()
     {
         _tracker.Reset();
+        _last = null;
         Read(); // baseline
+        _lastRead = _time.GetTimestamp();
     }
 
-    public void Sample(SystemSnapshot snapshot, in SamplingPlan plan) => snapshot.TopProcesses = Read();
+    /// <summary>
+    /// Refreshes every 5 s; the first list needs at least a 1 s window (a list measured over a few
+    /// milliseconds right after opening is empty). Until then the previous list carried over in the
+    /// snapshot stays visible instead of the section disappearing.
+    /// </summary>
+    public void Sample(SystemSnapshot snapshot, in SamplingPlan plan)
+    {
+        var since = _time.GetElapsedTime(_lastRead);
+        if (_last is not null && since < Refresh)
+        {
+            snapshot.TopProcesses = _last;
+            return;
+        }
+        if (_last is null && since < MinWindow)
+        {
+            return; // keep whatever the snapshot already has
+        }
+        _last = Read();
+        _lastRead = _time.GetTimestamp();
+        if (_last is not null)
+        {
+            snapshot.TopProcesses = _last;
+        }
+    }
 
     public void Clear(SystemSnapshot snapshot) => snapshot.TopProcesses = null;
 
