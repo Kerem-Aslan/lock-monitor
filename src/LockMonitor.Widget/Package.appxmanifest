@@ -55,7 +55,8 @@
             <uap3:Properties>
               <WidgetProvider>
                 <ProviderIcons>
-                  <Icon Path="Assets\StoreLogo.png" />
+                  <!-- Read by path by the widget host: no resource qualifiers here -->
+                  <Icon Path="ProviderAssets\Widget_Icon.png" />
                 </ProviderIcons>
                 <Activation>
                   <CreateInstance ClassId="A1202D97-A23F-4DFA-A3E1-C664383A2ECB" />
