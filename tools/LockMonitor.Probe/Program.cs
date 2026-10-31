@@ -5,35 +5,52 @@ using LockMonitor.Sampling;
 using LockMonitor.Sensors;
 
 // Usage: LockMonitor.Probe [--interval <seconds>] [--seconds <duration>] [--size small|medium|large]
+//                          [--no-gpu-temp] [--json]
 // Reads the widget's sensors the same way the provider does and prints values plus the cost of
 // each sensor, so data sources can be checked and measured without deploying the widget.
+// --json also prints the card data the widget would send for the last sample.
 
 double intervalSeconds = 2;
 double durationSeconds = 20;
-var size = CardSize.Small;
-for (int i = 0; i < args.Length - 1; i++)
+var size = CardSize.Large;
+bool gpuTemperature = true;
+bool json = false;
+for (int i = 0; i < args.Length; i++)
 {
     switch (args[i])
     {
         case "--interval": intervalSeconds = double.Parse(args[++i], CultureInfo.InvariantCulture); break;
         case "--seconds": durationSeconds = double.Parse(args[++i], CultureInfo.InvariantCulture); break;
         case "--size": size = Enum.Parse<CardSize>(args[++i], ignoreCase: true); break;
+        case "--no-gpu-temp": gpuTemperature = false; break;
+        case "--json": json = true; break;
     }
 }
 
-var sensors = SensorCatalog.CreateAll().Where(s => s.RequiredSize <= size).ToArray();
+var adapters = new GpuAdapterCatalog();
+Console.WriteLine("Adapters:");
+foreach (var a in adapters.Adapters)
+{
+    Console.WriteLine($"  0x{a.Luid:X}  {a.Name}  vendor=0x{a.VendorId:X4}  dedicated={Units.Bytes(a.DedicatedVideoMemory)}" +
+        (a.Luid == adapters.Default?.Luid ? "  (default)" : ""));
+}
+Console.WriteLine($"  hybrid graphics: {adapters.IsHybrid}");
+
+var interval = TimeSpan.FromSeconds(intervalSeconds);
+var plan = new SamplingPlan(true, size, interval,
+    gpuTemperature && adapters.Default is { } gpu ? new LuidSet([gpu.Luid]) : default);
+var sensors = SensorCatalog.CreateAll(adapters).Where(s => s.IsNeededFor(plan)).ToArray();
 var runners = sensors.Select(s => new SensorRunner(s, TimeProvider.System)).ToArray();
 var costs = new double[sensors.Length];
 var process = Process.GetCurrentProcess();
-var interval = TimeSpan.FromSeconds(intervalSeconds);
 
-Console.WriteLine($"Lock Monitor probe: {sensors.Length} sensors, size={size}, interval={intervalSeconds}s, duration={durationSeconds}s");
+Console.WriteLine($"Probe: {sensors.Length} sensors ({string.Join(", ", sensors.Select(s => s.Name))}), size={size}, interval={intervalSeconds}s, duration={durationSeconds}s");
 
 // Priming pass (rate counters need two readings), like the scheduler does.
 var snapshot = new SystemSnapshot();
 foreach (var r in runners)
 {
-    r.Sample(snapshot);
+    r.Sample(snapshot, plan);
 }
 Thread.Sleep(SamplingScheduler.PrimeDelay);
 
@@ -47,13 +64,21 @@ while (Stopwatch.GetElapsedTime(wallAtStart).TotalSeconds < durationSeconds)
     for (int i = 0; i < runners.Length; i++)
     {
         long t0 = Stopwatch.GetTimestamp();
-        runners[i].Sample(snapshot);
+        runners[i].Sample(snapshot, plan);
         costs[i] += Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
     }
     ticks++;
-    Console.WriteLine(
-        $"{snapshot.Timestamp.ToLocalTime():HH:mm:ss}  CPU {Fmt(snapshot.CpuPercent),6}  RAM {Fmt(snapshot.MemoryPercent),6}" +
-        $"  GPU {Fmt(snapshot.GpuPercent),6}  [{snapshot.GpuName ?? "busiest adapter"}]");
+
+    var g = CardData.SelectGpu(snapshot, null);
+    string line = $"{snapshot.Timestamp.ToLocalTime():HH:mm:ss}  CPU {Pct(snapshot.CpuPercent)}  RAM {Pct(snapshot.MemoryPercent)}  GPU {Pct(g?.UsagePercent)}";
+    if (size >= CardSize.Medium)
+    {
+        line += $"  T {(g?.TemperatureCelsius is { } t ? Units.Celsius(t) : "N/A"),5}" +
+                $"  VRAM {(g is { MemoryUsedBytes: { } u, MemoryTotalBytes: { } tot } ? Units.UsedOfTotal(u, tot) : "N/A")}" +
+                $"  NET ↓{(snapshot.NetworkDownBytesPerSecond is { } d ? Units.Rate(d) : "N/A")} ↑{(snapshot.NetworkUpBytesPerSecond is { } up ? Units.Rate(up) : "N/A")}" +
+                $"  {snapshot.SystemDriveName} {Pct(snapshot.SystemDrivePercent)}";
+    }
+    Console.WriteLine(line);
     Thread.Sleep(interval);
 }
 
@@ -64,16 +89,22 @@ Console.WriteLine();
 Console.WriteLine("Average cost per tick:");
 for (int i = 0; i < sensors.Length; i++)
 {
-    Console.WriteLine($"  {sensors[i].Name,-12} {costs[i] / ticks,8:0.00} ms");
+    Console.WriteLine($"  {sensors[i].Name,-16} {costs[i] / ticks,8:0.00} ms");
 }
+Console.WriteLine($"  {"total",-16} {costs.Sum() / ticks,8:0.00} ms");
 Console.WriteLine($"Process CPU: {cpu.TotalMilliseconds:0} ms over {wall.TotalSeconds:0.0} s = " +
-    $"{100.0 * cpu.TotalMilliseconds / wall.TotalMilliseconds / Environment.ProcessorCount:0.000} % of all cores " +
-    $"({100.0 * cpu.TotalMilliseconds / wall.TotalMilliseconds:0.00} % of one core)");
+    $"{100.0 * cpu.TotalMilliseconds / wall.TotalMilliseconds:0.00} % of one core");
 Console.WriteLine($"Private memory: {process.PrivateMemorySize64 / 1048576.0:0.0} MB, working set: {process.WorkingSet64 / 1048576.0:0.0} MB");
+
+if (json)
+{
+    Console.WriteLine();
+    Console.WriteLine(CardData.Build(snapshot, size, new CardOptions(null, gpuTemperature)));
+}
 
 foreach (var r in runners)
 {
     r.Close();
 }
 
-static string Fmt(double? value) => value is { } v ? v.ToString("0.0", CultureInfo.InvariantCulture) + "%" : "N/A";
+static string Pct(double? value) => (value is { } v ? v.ToString("0.0", CultureInfo.InvariantCulture) + "%" : "N/A").PadLeft(6);

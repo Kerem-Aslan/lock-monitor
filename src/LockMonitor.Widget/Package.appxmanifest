@@ -63,11 +63,19 @@
                 <Definitions>
                   <Definition Id="SystemMonitor"
                     DisplayName="System Monitor"
-                    Description="CPU, memory and GPU usage at a glance."
-                    AllowMultiple="true">
+                    Description="CPU, memory and GPU usage at a glance; network, disk, VRAM and GPU temperature on larger sizes."
+                    AllowMultiple="true"
+                    IsCustomizable="true">
+                    <!-- small is required for the lock screen -->
                     <Capabilities>
                       <Capability>
                         <Size Name="small" />
+                      </Capability>
+                      <Capability>
+                        <Size Name="medium" />
+                      </Capability>
+                      <Capability>
+                        <Size Name="large" />
                       </Capability>
                     </Capabilities>
                     <ThemeResources>

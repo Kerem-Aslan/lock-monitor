@@ -1,0 +1,64 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "System Monitor settings",
+      "weight": "Bolder"
+    },
+    {
+      "type": "Input.ChoiceSet",
+      "id": "interval",
+      "label": "Update every",
+      "value": "${interval}",
+      "choices": [
+        { "title": "1 second", "value": "1" },
+        { "title": "2 seconds (recommended)", "value": "2" },
+        { "title": "5 seconds", "value": "5" },
+        { "title": "10 seconds", "value": "10" }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "While battery saver is on, updates come at most every 5 seconds.",
+      "isSubtle": true,
+      "size": "Small",
+      "wrap": true,
+      "spacing": "None"
+    },
+    {
+      "type": "Input.ChoiceSet",
+      "id": "gpu",
+      "label": "Graphics card",
+      "value": "${gpu}",
+      "$when": "${showGpuPicker}",
+      "choices": [
+        { "$data": "${gpuChoices}", "title": "${title}", "value": "${value}" }
+      ]
+    },
+    {
+      "type": "Input.Toggle",
+      "id": "showGpuTemp",
+      "title": "Show GPU temperature (medium and large sizes)",
+      "value": "${showGpuTemp}",
+      "valueOn": "true",
+      "valueOff": "false",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "${gpuTempNote}",
+      "$when": "${gpuTempNote != ''}",
+      "isSubtle": true,
+      "size": "Small",
+      "wrap": true,
+      "spacing": "None"
+    }
+  ],
+  "actions": [
+    { "type": "Action.Execute", "title": "Save", "verb": "saveSettings" },
+    { "type": "Action.Execute", "title": "Cancel", "verb": "cancelSettings", "associatedInputs": "none" }
+  ]
+}

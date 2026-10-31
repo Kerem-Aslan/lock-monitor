@@ -4,6 +4,7 @@ using LockMonitor.Sampling;
 using LockMonitor.Sensors;
 using Microsoft.Windows.Widgets;
 using Microsoft.Windows.Widgets.Providers;
+using Windows.System.Power;
 
 namespace LockMonitor.Provider;
 
@@ -22,6 +23,9 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
 {
     public const string SystemMonitorDefinitionId = "SystemMonitor";
 
+    private const string SaveSettingsVerb = "saveSettings";
+    private const string CancelSettingsVerb = "cancelSettings";
+
     /// <summary>A cached reading older than this is not shown when a widget becomes active.</summary>
     private static readonly TimeSpan StaleAfter = TimeSpan.FromSeconds(10);
 
@@ -29,18 +33,22 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
     private readonly Dictionary<string, WidgetSession> _sessions = new(StringComparer.Ordinal);
     private readonly ServerLifetime _lifetime;
     private readonly TemplateStore _templates;
+    private readonly GpuAdapterCatalog _adapters;
     private readonly SamplingScheduler _scheduler;
+    private bool _energySaverOn;
 
-    public WidgetProvider(ServerLifetime lifetime, TemplateStore templates, IEnumerable<ISensor> sensors)
+    public WidgetProvider(ServerLifetime lifetime, TemplateStore templates, GpuAdapterCatalog adapters, IEnumerable<ISensor> sensors)
     {
         _lifetime = lifetime;
         _templates = templates;
+        _adapters = adapters;
         _scheduler = new SamplingScheduler(sensors, OnSnapshot);
+        WatchEnergySaver();
     }
 
     /// <summary>
     /// Restores widgets that were pinned before this process started. The host keeps them across
-    /// provider restarts, together with their CustomState.
+    /// provider restarts, together with their CustomState (the widget's settings).
     /// Call this before the class object is registered; host callbacks that still race with it
     /// win, because recovery never overwrites a session that already exists.
     /// </summary>
@@ -64,11 +72,11 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
                 added = _sessions.TryAdd(context.Id, new WidgetSession(context.Id, context.DefinitionId)
                 {
                     Size = context.Size,
-                    CustomState = info.CustomState ?? string.Empty,
+                    Settings = WidgetSettings.Parse(info.CustomState),
                 });
             }
             Log.Info(added
-                ? $"Recovered widget {context.Id} size={context.Size} active={context.IsActive}"
+                ? $"Recovered widget {context.Id} size={context.Size} active={context.IsActive} settings={info.CustomState}"
                 : $"Widget {context.Id} already known (host callback arrived first)");
 
             if (added && context.IsActive)
@@ -130,7 +138,40 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
 
     public void OnActionInvoked(WidgetActionInvokedArgs actionInvokedArgs)
     {
-        Log.Info($"OnActionInvoked {actionInvokedArgs.WidgetContext.Id} verb={actionInvokedArgs.Verb}");
+        string widgetId = actionInvokedArgs.WidgetContext.Id;
+        string verb = actionInvokedArgs.Verb;
+        Log.Info($"OnActionInvoked {widgetId} verb={verb}");
+
+        switch (verb)
+        {
+            case TemplateStore.OpenTaskManagerVerb:
+                OpenTaskManager();
+                break;
+
+            case SaveSettingsVerb:
+            case CancelSettingsVerb:
+                WidgetSession? session;
+                lock (_gate)
+                {
+                    if (!_sessions.TryGetValue(widgetId, out session))
+                    {
+                        return;
+                    }
+                    if (verb == SaveSettingsVerb)
+                    {
+                        session.Settings = session.Settings.WithInputs(actionInvokedArgs.Data);
+                    }
+                    session.InCustomization = false;
+                    session.NeedsTemplate = true;
+                }
+                if (verb == SaveSettingsVerb)
+                {
+                    Log.Info($"Settings saved for {widgetId}: {session.CustomState}");
+                }
+                StateChanged();
+                Push(session, CurrentSnapshot());
+                break;
+        }
     }
 
     public void OnWidgetContextChanged(WidgetContextChangedArgs contextChangedArgs)
@@ -153,10 +194,18 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
 
     // ----- IWidgetProvider2 ------------------------------------------------------------------
 
+    /// <summary>The user picked "Customize widget": show the settings card until Save or Cancel.</summary>
     public void OnCustomizationRequested(WidgetCustomizationRequestedArgs customizationRequestedArgs)
     {
-        // Customization (update interval, GPU temperature) arrives in phase 3.
-        Log.Info($"OnCustomizationRequested {customizationRequestedArgs.WidgetContext.Id}");
+        var session = GetOrAdd(customizationRequestedArgs.WidgetContext);
+        Log.Info($"OnCustomizationRequested {session.Id}");
+        lock (_gate)
+        {
+            session.InCustomization = true;
+            session.NeedsTemplate = true;
+        }
+        StateChanged();
+        Push(session, null);
     }
 
     // ----- sampling --------------------------------------------------------------------------
@@ -184,18 +233,33 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
         lock (_gate)
         {
             count = _sessions.Count;
-            plan = SamplingPlan.From(_sessions.Values.Select(s => (s.IsActive, ToCardSize(s.Size), s.Interval)));
+            plan = SamplingPlan.From(_sessions.Values.Select(DemandOf));
         }
         var previous = _scheduler.Plan;
         _scheduler.Apply(plan);
         if (plan != previous)
         {
             Log.Info(plan.IsActive
-                ? $"Sampling: every {plan.Interval.TotalSeconds:0.#}s for {plan.Size} cards"
+                ? $"Sampling: every {plan.Interval.TotalSeconds:0.#}s for {plan.Size} cards, GPU temperature: {plan.TemperatureLuids}" +
+                  (_energySaverOn ? " (energy saver on)" : "")
                 : "Sampling stopped (no active widget)");
         }
         _lifetime.OnWidgetCountChanged(count);
     }
+
+    private WidgetDemand DemandOf(WidgetSession s)
+    {
+        var options = OptionsOf(s);
+        return new WidgetDemand(
+            IsActive: s.IsActive && !s.InCustomization,
+            Size: ToCardSize(s.Size),
+            Interval: s.Settings.EffectiveInterval(_energySaverOn),
+            TemperatureLuid: options.ShowGpuTemperature ? options.GpuLuid ?? _adapters.Default?.Luid : null);
+    }
+
+    private CardOptions OptionsOf(WidgetSession s) => new(
+        GpuLuid: _adapters.FindByName(s.Settings.GpuName)?.Luid,
+        ShowGpuTemperature: s.Settings.EffectiveShowGpuTemperature(_adapters.IsHybrid));
 
     private void SetActive(string widgetId, bool active, string? reason)
     {
@@ -220,14 +284,46 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
         }
         else
         {
-            // Lets us see how long the host keeps a widget active and how many updates it got,
+            // Shows how long the host keeps a widget active and how many updates it got,
             // e.g. on the lock screen, without logging every tick.
             var elapsed = Stopwatch.GetElapsedTime(session.ActiveSince);
             Log.Info($"Deactivate {widgetId} after {elapsed.TotalSeconds:0.0}s, {session.UpdatesWhileActive} updates sent");
         }
     }
 
+    // ----- energy saver ----------------------------------------------------------------------
+
+    private void WatchEnergySaver()
+    {
+        try
+        {
+            _energySaverOn = PowerManager.EnergySaverStatus == EnergySaverStatus.On;
+            PowerManager.EnergySaverStatusChanged += (_, _) =>
+            {
+                _energySaverOn = PowerManager.EnergySaverStatus == EnergySaverStatus.On;
+                Log.Info($"Energy saver {(_energySaverOn ? "on" : "off")}");
+                StateChanged();
+            };
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Energy saver status unavailable", ex);
+        }
+    }
+
     // ----- helpers ---------------------------------------------------------------------------
+
+    private static void OpenTaskManager()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("taskmgr.exe") { UseShellExecute = true })?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Could not open Task Manager", ex);
+        }
+    }
 
     private WidgetSession GetOrAdd(WidgetContext context)
     {
@@ -248,16 +344,28 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
     {
         lock (_gate)
         {
-            return [.. _sessions.Values.Where(s => s.IsActive)];
+            return [.. _sessions.Values.Where(s => s.IsActive && !s.InCustomization)];
         }
     }
 
     private void Push(WidgetSession session, SystemSnapshot? snapshot)
     {
-        string data = CardData.Build(snapshot, ToCardSize(session.Size));
+        string data;
+        string template;
         bool sendTemplate;
         lock (_gate)
         {
+            if (session.InCustomization)
+            {
+                data = SettingsCard.BuildData(session.Settings, _adapters.Adapters, _adapters.Default);
+                template = _templates.Settings ?? _templates.Composed;
+            }
+            else
+            {
+                data = CardData.Build(snapshot, ToCardSize(session.Size), OptionsOf(session));
+                template = _templates.Composed;
+            }
+
             sendTemplate = session.NeedsTemplate;
             if (!sendTemplate && data == session.LastData)
             {
@@ -276,7 +384,7 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
             };
             if (sendTemplate)
             {
-                options.Template = _templates.Composed;
+                options.Template = template;
             }
             WidgetManager.GetDefault().UpdateWidget(options);
             lock (_gate)

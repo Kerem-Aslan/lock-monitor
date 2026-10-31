@@ -35,7 +35,8 @@ internal static class Program
 
         using var lifetime = new ServerLifetime(TimeSpan.FromSeconds(30));
         var templates = TemplateStore.LoadFrom(Path.Combine(AppContext.BaseDirectory, "Templates"));
-        var provider = new WidgetProvider(lifetime, templates, SensorCatalog.CreateAll());
+        var adapters = new GpuAdapterCatalog();
+        var provider = new WidgetProvider(lifetime, templates, adapters, SensorCatalog.CreateAll(adapters));
         var factory = new WidgetProviderFactory(() => provider);
 
         // Restore pinned widgets before the host can reach us, so recovery and host callbacks

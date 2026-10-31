@@ -17,7 +17,7 @@ public sealed class MemorySensor : ISensor
     {
     }
 
-    public void Sample(SystemSnapshot snapshot)
+    public void Sample(SystemSnapshot snapshot, in SamplingPlan plan)
     {
         var status = new Kernel32.MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf<Kernel32.MEMORYSTATUSEX>() };
         if (!Kernel32.GlobalMemoryStatusEx(ref status))

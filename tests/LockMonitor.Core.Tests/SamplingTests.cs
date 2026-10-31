@@ -12,7 +12,7 @@ public class SamplingPlanTests
     [Fact]
     public void No_active_widget_means_idle()
     {
-        var plan = SamplingPlan.From([(false, CardSize.Large, TwoSeconds), (false, CardSize.Small, TwoSeconds)]);
+        var plan = SamplingPlan.From([new(false, CardSize.Large, TwoSeconds), new(false, CardSize.Small, TwoSeconds)]);
         Assert.False(plan.IsActive);
         Assert.Equal(SamplingPlan.Idle, SamplingPlan.From([]));
     }
@@ -22,9 +22,9 @@ public class SamplingPlanTests
     {
         var plan = SamplingPlan.From(
         [
-            (true, CardSize.Small, TimeSpan.FromSeconds(5)),
-            (true, CardSize.Medium, TwoSeconds),
-            (false, CardSize.Large, TimeSpan.FromSeconds(1)),
+            new(true, CardSize.Small, TimeSpan.FromSeconds(5)),
+            new(true, CardSize.Medium, TwoSeconds),
+            new(false, CardSize.Large, TimeSpan.FromSeconds(1)),
         ]);
         Assert.Equal(new SamplingPlan(true, CardSize.Medium, TwoSeconds), plan);
     }
@@ -32,13 +32,15 @@ public class SamplingPlanTests
     [Fact]
     public void Interval_is_clamped_to_the_minimum()
     {
-        var plan = SamplingPlan.From([(true, CardSize.Small, TimeSpan.FromMilliseconds(100))]);
+        var plan = SamplingPlan.From([new(true, CardSize.Small, TimeSpan.FromMilliseconds(100))]);
         Assert.Equal(SamplingPlan.MinInterval, plan.Interval);
     }
 }
 
 public class SensorRunnerTests
 {
+    private static readonly SamplingPlan Active = new(true, CardSize.Large, TimeSpan.FromSeconds(2));
+
     [Fact]
     public void Failure_clears_fields_and_does_not_throw()
     {
@@ -46,7 +48,7 @@ public class SensorRunnerTests
         var runner = new SensorRunner(sensor, new ManualTime());
         var snapshot = new SystemSnapshot { CpuPercent = 50 };
 
-        runner.Sample(snapshot);
+        runner.Sample(snapshot, Active);
 
         Assert.Null(snapshot.CpuPercent);
     }
@@ -60,19 +62,19 @@ public class SensorRunnerTests
 
         for (int i = 0; i < SensorRunner.FailuresBeforeBackoff; i++)
         {
-            runner.Sample(new SystemSnapshot());
+            runner.Sample(new SystemSnapshot(), Active);
         }
         Assert.True(runner.IsBackingOff);
         Assert.False(runner.IsOpen);
         int samplesBefore = sensor.SampleCalls;
 
-        runner.Sample(new SystemSnapshot()); // still backing off: sensor not touched
+        runner.Sample(new SystemSnapshot(), Active); // still backing off: sensor not touched
         Assert.Equal(samplesBefore, sensor.SampleCalls);
 
         sensor.Fail = false;
         time.Advance(SensorRunner.InitialBackoff);
         var snapshot = new SystemSnapshot();
-        runner.Sample(snapshot);
+        runner.Sample(snapshot, Active);
         Assert.Equal(42, snapshot.CpuPercent);
         Assert.True(runner.IsOpen);
     }
@@ -84,12 +86,12 @@ public class SensorRunnerTests
         var sensor = new FakeSensor { Refresh = TimeSpan.FromSeconds(30) };
         var runner = new SensorRunner(sensor, time);
 
-        runner.Sample(new SystemSnapshot());
-        runner.Sample(new SystemSnapshot());
+        runner.Sample(new SystemSnapshot(), Active);
+        runner.Sample(new SystemSnapshot(), Active);
         Assert.Equal(1, sensor.SampleCalls);
 
         time.Advance(TimeSpan.FromSeconds(30));
-        runner.Sample(new SystemSnapshot());
+        runner.Sample(new SystemSnapshot(), Active);
         Assert.Equal(2, sensor.SampleCalls);
     }
 }
@@ -196,7 +198,7 @@ internal sealed class FakeSensor : ISensor
         IsOpen = true;
     }
 
-    public void Sample(SystemSnapshot snapshot)
+    public void Sample(SystemSnapshot snapshot, in SamplingPlan plan)
     {
         Interlocked.Increment(ref SampleCalls);
         if (Fail)

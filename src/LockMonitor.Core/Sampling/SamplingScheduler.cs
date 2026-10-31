@@ -71,7 +71,6 @@ public sealed class SamplingScheduler : IAsyncDisposable
     private async Task RunAsync()
     {
         var token = _shutdown.Token;
-        var primedSize = (Rendering.CardSize?)null;
         while (!token.IsCancellationRequested)
         {
             var plan = Plan;
@@ -80,18 +79,17 @@ public sealed class SamplingScheduler : IAsyncDisposable
                 if (!plan.IsActive)
                 {
                     CloseAll();
-                    primedSize = null;
                     await _wake.WaitAsync(token).ConfigureAwait(false); // no timeout: zero polling while idle
                     DrainWakeSignals();
                     continue;
                 }
 
-                // Opening new sensors (activation or a larger card) needs a priming read first.
-                bool priming = primedSize is null || plan.Size > primedSize;
+                // A sensor opened on this tick (activation, larger card, GPU temperature switched on)
+                // may be a rate counter that needs a second reading: sample, wait briefly, sample again.
+                bool priming = _runners.Any(r => r.Sensor.IsNeededFor(plan) && !r.IsOpen && !r.IsBackingOff);
                 var snapshot = Sample(plan);
                 if (priming)
                 {
-                    primedSize = plan.Size;
                     await WaitAsync(PrimeDelay, token).ConfigureAwait(false);
                     continue;
                 }
@@ -127,9 +125,9 @@ public sealed class SamplingScheduler : IAsyncDisposable
         snapshot.Timestamp = _time.GetUtcNow();
         foreach (var runner in _runners)
         {
-            if (runner.Sensor.RequiredSize <= plan.Size)
+            if (runner.Sensor.IsNeededFor(plan))
             {
-                runner.Sample(snapshot);
+                runner.Sample(snapshot, plan);
             }
             else
             {

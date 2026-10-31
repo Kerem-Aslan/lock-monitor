@@ -23,7 +23,7 @@ public sealed class SensorRunner(ISensor sensor, TimeProvider time)
     public bool IsOpen => _open;
     public bool IsBackingOff => time.GetUtcNow() < _retryAt;
 
-    public void Sample(SystemSnapshot snapshot)
+    public void Sample(SystemSnapshot snapshot, in SamplingPlan plan)
     {
         var now = time.GetUtcNow();
         if (now < _retryAt)
@@ -43,7 +43,7 @@ public sealed class SensorRunner(ISensor sensor, TimeProvider time)
                 sensor.Open();
                 _open = true;
             }
-            sensor.Sample(snapshot);
+            sensor.Sample(snapshot, plan);
             _consecutiveFailures = 0;
             _backoffLevel = 0;
             _nextRefresh = now + sensor.RefreshInterval;

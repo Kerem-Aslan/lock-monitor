@@ -64,6 +64,7 @@ internal static unsafe partial class Dxgi
                         Name: new string(desc.Description).TrimEnd('\0'),
                         VendorId: desc.VendorId,
                         DedicatedVideoMemory: (ulong)desc.DedicatedVideoMemory,
+                        SharedSystemMemory: (ulong)desc.SharedSystemMemory,
                         IsSoftware: (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0));
                 }
                 finally
@@ -87,7 +88,7 @@ internal static unsafe partial class Dxgi
 }
 
 /// <summary>One graphics adapter as reported by DXGI.</summary>
-public sealed record GpuAdapterInfo(long Luid, string Name, uint VendorId, ulong DedicatedVideoMemory, bool IsSoftware)
+public sealed record GpuAdapterInfo(long Luid, string Name, uint VendorId, ulong DedicatedVideoMemory, bool IsSoftware, ulong SharedSystemMemory = 0)
 {
     public bool IsHardware => !IsSoftware;
 }

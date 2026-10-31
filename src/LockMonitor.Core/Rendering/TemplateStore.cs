@@ -38,7 +38,8 @@ public sealed class TemplateStore
                 sources[size] = File.ReadAllText(path);
             }
         }
-        return FromSources(sources);
+        var settingsPath = Path.Combine(directory, "settings.json");
+        return FromSources(sources).WithSettings(File.Exists(settingsPath) ? File.ReadAllText(settingsPath) : null);
     }
 
     public static TemplateStore FromSources(IReadOnlyDictionary<CardSize, string> sources)
@@ -63,16 +64,35 @@ public sealed class TemplateStore
             // The first template provides the card-level properties (version, $schema, ...).
             root ??= (JsonObject)card.DeepClone();
 
-            var items = card["body"]?.DeepClone() as JsonArray ?? [];
+            var items = card["body"] as JsonArray ?? [];
+            string sizeCheck = $"$host.widgetSize==\"{name}\"";
+
+            // Signed-in host (Widgets board): tapping the card opens Task Manager.
             body.Add((JsonNode)new JsonObject
             {
                 ["type"] = "Container",
-                ["$when"] = $"${{$host.widgetSize==\"{name}\"}}",
-                ["items"] = items,
+                ["$when"] = $"${{{sizeCheck} && $host.isUserContextAuthenticated != false}}",
+                ["selectAction"] = new JsonObject { ["type"] = "Action.Execute", ["verb"] = OpenTaskManagerVerb },
+                ["items"] = items.DeepClone(),
+            });
+            // Lock screen: only Action.OpenUrl is allowed before sign-in, so no tap action.
+            body.Add((JsonNode)new JsonObject
+            {
+                ["type"] = "Container",
+                ["$when"] = $"${{{sizeCheck} && $host.isUserContextAuthenticated == false}}",
+                ["items"] = items.DeepClone(),
             });
         }
 
         root!["body"] = body;
         return new TemplateStore(root.ToJsonString(), sources.Keys.ToHashSet());
     }
+
+    public const string OpenTaskManagerVerb = "openTaskManager";
+
+    /// <summary>The settings card (Templates\settings.json), shown while the user customizes a widget.</summary>
+    public string? Settings { get; private init; }
+
+    public TemplateStore WithSettings(string? settingsTemplate) =>
+        new(Composed, AvailableSizes) { Settings = settingsTemplate };
 }

@@ -35,7 +35,7 @@ public sealed class CpuUsageSensor : ISensor
         _query.Collect(); // rate counter: the first collection only sets the baseline
     }
 
-    public void Sample(SystemSnapshot snapshot)
+    public void Sample(SystemSnapshot snapshot, in SamplingPlan plan)
     {
         _query!.Collect();
         snapshot.CpuPercent = PdhQuery.GetDouble(_counter, noCap100: true) is { } value
