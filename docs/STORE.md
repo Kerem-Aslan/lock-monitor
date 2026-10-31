@@ -68,7 +68,7 @@ Paste into **Submission options → Restricted capabilities**:
 | Field | Value |
 |---|---|
 | Category | Utilities & tools |
-| Privacy policy URL | Host [`PRIVACY.md`](../PRIVACY.md) at a public URL (the repository is private), e.g. a GitHub Pages page or a public gist |
+| Privacy policy URL | https://github.com/Kerem-Aslan/lock-monitor/blob/master/PRIVACY.md |
 | Age rating | Complete the IARC questionnaire: no user interaction, no data sharing → 3+/Everyone |
 | Search terms | system monitor, widget, CPU, GPU, RAM, temperature, lock screen |
 

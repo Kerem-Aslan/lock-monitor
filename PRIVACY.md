@@ -42,5 +42,5 @@ information leaves your PC.
 
 ## Contact
 
-Questions about this policy: open an issue at the project's repository or contact the publisher
+Questions about this policy: open an issue at https://github.com/Kerem-Aslan/lock-monitor/issues or contact the publisher
 through the Microsoft Store listing.
