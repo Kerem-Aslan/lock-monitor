@@ -27,6 +27,20 @@ public sealed class SystemSnapshot
     /// <summary>Fixed drives (letter order); null until the disk sensor has run.</summary>
     public IReadOnlyList<DriveReading>? Drives { get; set; }
 
+    /// <summary>
+    /// ACPI thermal zone temperature (not the CPU die). null when the firmware exposes no zone or
+    /// the value never changes (a fixed placeholder); the card then hides the row.
+    /// </summary>
+    public double? SystemTemperatureCelsius { get; set; }
+
+    /// <summary>null when the PC has no battery.</summary>
+    public BatteryReading? Battery { get; set; }
+
+    public TimeSpan? Uptime { get; set; }
+
+    /// <summary>Apps using the most CPU over the last interval, busiest first.</summary>
+    public IReadOnlyList<ProcessUsage>? TopProcesses { get; set; }
+
     public DriveReading? FindDrive(string name) =>
         Drives?.FirstOrDefault(d => string.Equals(d.Name, name, StringComparison.OrdinalIgnoreCase));
 
@@ -82,3 +96,18 @@ public sealed record DriveReading(string Name, string Label, bool IsSystem, ulon
 {
     public double? Percent => TotalBytes > 0 ? 100.0 * UsedBytes / TotalBytes : null;
 }
+
+public enum ChargeState
+{
+    Discharging,
+    Charging,
+    /// <summary>On AC power but not charging (full, or charging paused by the firmware).</summary>
+    PluggedIn,
+}
+
+/// <summary>Battery state. Immutable.</summary>
+/// <param name="TimeRemaining">Estimated time left on battery, when Windows has an estimate.</param>
+public sealed record BatteryReading(int Percent, ChargeState State, TimeSpan? TimeRemaining);
+
+/// <summary>CPU use of all processes with one image name ("chrome" = every chrome.exe).</summary>
+public sealed record ProcessUsage(string Name, double CpuPercent);

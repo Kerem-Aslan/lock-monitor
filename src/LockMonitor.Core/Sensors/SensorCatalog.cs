@@ -12,5 +12,9 @@ public static class SensorCatalog
         new GpuTemperatureSensor(adapters),
         new NetworkSensor(),
         new DiskSensor(),
+        new ThermalZoneSensor(),
+        new BatterySensor(),
+        new UptimeSensor(),
+        new TopProcessesSensor(),
     ];
 }

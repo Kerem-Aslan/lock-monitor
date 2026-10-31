@@ -31,8 +31,20 @@
               "$when": "${hasBar}",
               "spacing": "Small",
               "columns": [
-                { "type": "Column", "width": "${bar}", "style": "${barStyle}", "minHeight": "4px", "items": [] },
-                { "type": "Column", "width": "${rest}", "style": "emphasis", "minHeight": "4px", "items": [] }
+                {
+                  "type": "Column",
+                  "width": "${bar}",
+                  "style": "${barStyle}",
+                  "minHeight": "4px",
+                  "items": []
+                },
+                {
+                  "type": "Column",
+                  "width": "${rest}",
+                  "style": "emphasis",
+                  "minHeight": "4px",
+                  "items": []
+                }
               ]
             }
           ]
@@ -93,8 +105,66 @@
               "$when": "${hasBar}",
               "spacing": "Small",
               "columns": [
-                { "type": "Column", "width": "${bar}", "style": "${barStyle}", "minHeight": "4px", "items": [] },
-                { "type": "Column", "width": "${rest}", "style": "emphasis", "minHeight": "4px", "items": [] }
+                {
+                  "type": "Column",
+                  "width": "${bar}",
+                  "style": "${barStyle}",
+                  "minHeight": "4px",
+                  "items": []
+                },
+                {
+                  "type": "Column",
+                  "width": "${rest}",
+                  "style": "emphasis",
+                  "minHeight": "4px",
+                  "items": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "separator": true,
+      "spacing": "Medium",
+      "$when": "${count(topProcesses) > 0}",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Top processes",
+          "isSubtle": true,
+          "size": "Small",
+          "weight": "Bolder"
+        },
+        {
+          "type": "ColumnSet",
+          "$data": "${topProcesses}",
+          "spacing": "Small",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${name}",
+                  "wrap": false
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "auto",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${value}",
+                  "color": "${color}",
+                  "weight": "${weight}",
+                  "horizontalAlignment": "Right"
+                }
               ]
             }
           ]

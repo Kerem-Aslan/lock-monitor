@@ -49,6 +49,15 @@ public static class Units
 
     public static string Celsius(double celsius) => $"{Fmt(celsius, 0)} °C";
 
+    /// <summary>Two most significant units: "3 d 4 h", "5 h 12 min", "14 min", "&lt;1 min".</summary>
+    public static string Duration(TimeSpan span) => span switch
+    {
+        { TotalDays: >= 1 } => $"{(int)span.TotalDays} d {span.Hours} h",
+        { TotalHours: >= 1 } => $"{(int)span.TotalHours} h {span.Minutes} min",
+        { TotalMinutes: >= 1 } => $"{(int)span.TotalMinutes} min",
+        _ => "<1 min",
+    };
+
     private static string Fmt(double value, int decimals) =>
         Math.Round(value, decimals, MidpointRounding.AwayFromZero).ToString(decimals == 0 ? "0" : "0.0", CultureInfo.InvariantCulture);
 }

@@ -28,8 +28,11 @@ public static class CardData
     /// <summary>Usage above this percentage is highlighted.</summary>
     public const double HighUsageThreshold = 85.0;
 
-    /// <summary>GPU temperature at or above this is highlighted.</summary>
-    public const double HighGpuTemperature = 85.0;
+    /// <summary>GPU/system temperature at or above this is highlighted.</summary>
+    public const double HighTemperature = 85.0;
+
+    /// <summary>Battery at or below this while discharging is highlighted.</summary>
+    public const int LowBatteryPercent = 15;
 
     /// <summary>Shown when a sensor cannot provide a value on this machine.</summary>
     public const string NotAvailable = "N/A";
@@ -61,6 +64,7 @@ public static class CardData
         if (size >= CardSize.Medium)
         {
             root["details"] = Details(snapshot, gpu, options);
+            root["topProcesses"] = TopProcesses(size == CardSize.Large ? snapshot : null);
         }
         return root.ToJsonString();
     }
@@ -112,7 +116,7 @@ public static class CardData
         {
             double? t = gpu?.TemperatureCelsius;
             rows.Add((JsonNode)Detail("GPU temp", pending ? Pending : t is { } c ? Units.Celsius(c) : NotAvailable,
-                high: t >= HighGpuTemperature));
+                high: t >= HighTemperature));
         }
 
         string memLabel = gpu?.MemoryIsShared == true ? "GPU memory" : "VRAM";
@@ -152,6 +156,42 @@ public static class CardData
             : s!.MemoryUsedBytes is { } mu && s.MemoryTotalBytes is { } mt ? Units.UsedOfTotal(mu, mt) : NotAvailable;
         rows.Add((JsonNode)Detail("Memory", ram, percent: s?.MemoryPercent, high: IsHigh(s?.MemoryPercent), largeOnly: true));
 
+        // Rows below are hidden (not N/A) when the PC simply does not have them.
+        if (s?.SystemTemperatureCelsius is { } zone)
+        {
+            rows.Add((JsonNode)Detail("System temp (ACPI)", Units.Celsius(zone), high: zone >= HighTemperature, largeOnly: true));
+        }
+
+        if (s?.Battery is { } battery)
+        {
+            bool low = battery.State == ChargeState.Discharging && battery.Percent <= LowBatteryPercent;
+            rows.Add((JsonNode)Detail("Battery", $"{battery.Percent}%", FormatBattery(battery), battery.Percent, low, largeOnly: true));
+        }
+
+        rows.Add((JsonNode)Detail("Uptime", pending ? Pending : s!.Uptime is { } uptime ? Units.Duration(uptime) : NotAvailable, largeOnly: true));
+
+        return rows;
+    }
+
+    /// <summary>"76% · Charging", "100% · Plugged in", "54% · 2 h 10 min left", "54% · On battery".</summary>
+    public static string FormatBattery(BatteryReading b) => b.State switch
+    {
+        ChargeState.Charging => $"{b.Percent}% · Charging",
+        ChargeState.PluggedIn => $"{b.Percent}% · Plugged in",
+        _ when b.TimeRemaining is { } left => $"{b.Percent}% · {Units.Duration(left)} left",
+        _ => $"{b.Percent}% · On battery",
+    };
+
+    /// <summary>Busiest apps, large cards only; always present (possibly empty) so templates can count it.</summary>
+    private static JsonArray TopProcesses(SystemSnapshot? s)
+    {
+        var rows = new JsonArray();
+        foreach (var p in s?.TopProcesses ?? [])
+        {
+            var row = new JsonObject { ["name"] = p.Name, ["value"] = FormatPercent(p.CpuPercent) };
+            AddEmphasis(row, IsHigh(p.CpuPercent));
+            rows.Add((JsonNode)row);
+        }
         return rows;
     }
 
