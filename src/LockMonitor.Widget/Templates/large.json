@@ -43,7 +43,8 @@
                   "width": "${rest}",
                   "style": "emphasis",
                   "minHeight": "4px",
-                  "items": []
+                  "items": [],
+                  "spacing": "None"
                 }
               ]
             }
@@ -117,7 +118,8 @@
                   "width": "${rest}",
                   "style": "emphasis",
                   "minHeight": "4px",
-                  "items": []
+                  "items": [],
+                  "spacing": "None"
                 }
               ]
             }
