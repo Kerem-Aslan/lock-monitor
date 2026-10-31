@@ -135,6 +135,25 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
 
     public void Deactivate(string widgetId)
     {
+        // The settings flyout can be closed with its X button, which sends no action: the host just
+        // deactivates the flyout and re-activates the widget at its real size. Treat a deactivation
+        // during customization as "closed without saving", otherwise the widget itself would keep
+        // showing the settings card. (Save/Cancel arrive as actions before this.)
+        bool closedWithoutSaving = false;
+        lock (_gate)
+        {
+            if (_sessions.TryGetValue(widgetId, out var session) && session.InCustomization)
+            {
+                session.InCustomization = false;
+                session.NeedsTemplate = true;
+                closedWithoutSaving = true;
+            }
+        }
+        if (closedWithoutSaving)
+        {
+            Log.Info($"Customization of {widgetId} closed without saving");
+        }
+
         SetActive(widgetId, false, null);
         StateChanged();
     }
