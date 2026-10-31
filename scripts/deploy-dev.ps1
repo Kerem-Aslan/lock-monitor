@@ -12,13 +12,17 @@
 .PARAMETER Configuration  Debug (default) or Release.
 .PARAMETER Platform       x64 (default) or ARM64.
 .PARAMETER Clean          Unregister the package first (removes pinned widgets).
+.PARAMETER Aot            Deploy a Native AOT build (forces Release). Needs the MSVC linker
+                          ("Desktop development with C++" workload).
 #>
 [CmdletBinding()]
 param(
     [ValidateSet('Debug', 'Release')] [string] $Configuration = 'Debug',
     [ValidateSet('x64', 'ARM64')] [string] $Platform = 'x64',
-    [switch] $Clean
+    [switch] $Clean,
+    [switch] $Aot
 )
+if ($Aot) { $Configuration = 'Release' }
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
@@ -41,10 +45,23 @@ Write-Host "Building $Configuration|$Platform..."
 dotnet build $project -c $Configuration -p:Platform=$Platform --nologo -v:minimal
 if ($LASTEXITCODE -ne 0) { throw "Build failed ($LASTEXITCODE)" }
 
+if ($Aot) {
+    # The ILCompiler's vcvarsall lookup calls vswhere.exe through PATH.
+    $env:PATH = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer;$env:PATH"
+    $publish = Join-Path $repo 'artifacts\aot-publish'
+    Write-Host "Publishing Native AOT to $publish..."
+    dotnet publish $project -c Release -p:Platform=$Platform -r $rid -p:PublishAot=true `
+        -p:GenerateAppxPackageOnBuild=false --nologo -v:minimal -o $publish
+    if ($LASTEXITCODE -ne 0) { throw "AOT publish failed ($LASTEXITCODE)" }
+    # Publish does not emit the generated AppxManifest.xml; take it from the Release build.
+    Copy-Item (Join-Path $output 'AppxManifest.xml') $publish -Force
+    $output = $publish
+}
+
 Stop-Provider
 Write-Host "Copying layout to $layout..."
 New-Item -ItemType Directory -Force $layout | Out-Null
-robocopy $output $layout /MIR /XF *.locked-old /NFL /NDL /NJH /NJS /NP /R:2 /W:1 | Out-Null
+robocopy $output $layout /MIR /XF *.locked-old *.pdb /NFL /NDL /NJH /NJS /NP /R:2 /W:1 | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "robocopy failed ($LASTEXITCODE). A file may be locked; retry with -Clean." }
 
 # Windows refuses to re-register a changed manifest with the same version in developer mode,

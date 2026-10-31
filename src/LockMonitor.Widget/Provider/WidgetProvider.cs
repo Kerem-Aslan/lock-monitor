@@ -27,6 +27,8 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
     /// <summary>
     /// Restores widgets that were pinned before this process started. The host keeps them across
     /// provider restarts, together with their CustomState.
+    /// Call this before the class object is registered; host callbacks that still race with it
+    /// win, because recovery never overwrites a session that already exists.
     /// </summary>
     public void RecoverRunningWidgets()
     {
@@ -42,16 +44,19 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
                 continue;
             }
 
+            bool added;
             lock (_gate)
             {
-                _sessions[context.Id] = new WidgetSession(context.Id, context.DefinitionId)
+                added = _sessions.TryAdd(context.Id, new WidgetSession(context.Id, context.DefinitionId)
                 {
                     Size = context.Size,
                     IsActive = context.IsActive,
                     CustomState = info.CustomState ?? string.Empty,
-                };
+                });
             }
-            Log.Info($"Recovered widget {context.Id} size={context.Size} active={context.IsActive}");
+            Log.Info(added
+                ? $"Recovered widget {context.Id} size={context.Size} active={context.IsActive}"
+                : $"Widget {context.Id} already known (host callback arrived first)");
         }
 
         int count;

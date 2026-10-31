@@ -16,7 +16,8 @@ Windows App SDK, and needs no administrator rights or kernel driver.
 | .NET SDK | 10.0.x (LTS) | `dotnet --list-sdks` |
 | Windows SDK | 10.0.26100 | Installed with Visual Studio |
 | Visual Studio 2026 (optional) | 18.x with *.NET desktop development* + *WinUI application development* | Only needed for F5 debugging; the scripts work without it |
-| NuGet packages | Microsoft.WindowsAppSDK 2.6.4 | Pinned in `Directory.Packages.props`, restored automatically |
+| MSVC linker (only for `-Aot`) | VS *Desktop development with C++* workload | Native AOT links with `link.exe` |
+| NuGet packages | Microsoft.WindowsAppSDK.Widgets + .Runtime 2.6.4 | Component packages instead of the metapackage, which would add ~40 MB of ONNX Runtime/DirectML/WebView2. Pinned in `Directory.Packages.props` |
 | Windows App Runtime | 2.6.x | Installed by the Store as a dependency; present on most machines |
 
 ## Build and deploy (development)
@@ -24,8 +25,19 @@ Windows App SDK, and needs no administrator rights or kernel driver.
 ```powershell
 # from the repository root, in PowerShell 7 (pwsh)
 pwsh -ExecutionPolicy Bypass -File scripts\deploy-dev.ps1          # Debug | x64
+pwsh -ExecutionPolicy Bypass -File scripts\deploy-dev.ps1 -Aot     # Release, Native AOT (smallest footprint)
 pwsh -ExecutionPolicy Bypass -File scripts\deploy-dev.ps1 -Clean   # unregister first (removes pinned widgets)
 ```
+
+Each deploy stamps a time-based build/revision number into the *layout* manifest, because Windows
+refuses to re-register a changed manifest with the same version in developer mode.
+
+### Measured footprint (phase 1, idle provider with one pinned widget)
+
+| Build | Package size | Private memory | Working set | Start-up CPU |
+|---|---|---|---|---|
+| Debug, JIT, self-contained | 103 MB | 9.3 MB | 38.9 MB | — |
+| Release, Native AOT | 3.9 MB | 4.9 MB | 16.0 MB | 31 ms |
 
 The script builds the project, mirrors the output into `artifacts\dev-layout` and registers it with
 `Add-AppxPackage -Register`. Registering from a separate folder keeps the build output free of file

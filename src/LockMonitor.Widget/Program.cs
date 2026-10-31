@@ -37,6 +37,10 @@ internal static class Program
         var provider = new WidgetProvider(lifetime, templates);
         var factory = new WidgetProviderFactory(() => provider);
 
+        // Restore pinned widgets before the host can reach us, so recovery and host callbacks
+        // (CreateWidget/Activate) do not race on the same widget.
+        provider.RecoverRunningWidgets();
+
         var comWrappers = new StrategyBasedComWrappers();
         nint pFactory = comWrappers.GetOrCreateComInterfaceForObject(factory, CreateComInterfaceFlags.None);
         try
@@ -51,7 +55,6 @@ internal static class Program
 
             try
             {
-                provider.RecoverRunningWidgets();
                 lifetime.WaitForExit();
             }
             finally
