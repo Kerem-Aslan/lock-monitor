@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap3 com rescap">
+
+  <!-- Development identity. Phase 5 replaces these with the Partner Center values. -->
+  <Identity
+    Name="LockMonitor.Dev"
+    Publisher="CN=LockMonitorDev"
+    Version="0.1.0.0" />
+
+  <Properties>
+    <DisplayName>Lock Monitor</DisplayName>
+    <PublisherDisplayName>Lock Monitor (dev)</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22621.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+
+  <Applications>
+    <Application Id="App"
+      Executable="$targetnametoken$.exe"
+      EntryPoint="$targetentrypoint$">
+      <uap:VisualElements
+        DisplayName="Lock Monitor"
+        Description="CPU, memory and GPU usage widget for the Widgets board and the lock screen."
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+      </uap:VisualElements>
+
+      <Extensions>
+        <!-- Out-of-process COM server that implements IWidgetProvider -->
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer Executable="LockMonitor.Widget.exe" Arguments="-RegisterProcessAsComServer" DisplayName="Lock Monitor widget provider">
+              <com:Class Id="A1202D97-A23F-4DFA-A3E1-C664383A2ECB" DisplayName="LockMonitorWidgetProvider" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+
+        <uap3:Extension Category="windows.appExtension">
+          <uap3:AppExtension Name="com.microsoft.windows.widgets" DisplayName="Lock Monitor" Id="LockMonitorProvider" PublicFolder="Public">
+            <uap3:Properties>
+              <WidgetProvider>
+                <ProviderIcons>
+                  <Icon Path="Assets\StoreLogo.png" />
+                </ProviderIcons>
+                <Activation>
+                  <CreateInstance ClassId="A1202D97-A23F-4DFA-A3E1-C664383A2ECB" />
+                </Activation>
+                <Definitions>
+                  <Definition Id="SystemMonitor"
+                    DisplayName="System Monitor"
+                    Description="CPU, memory and GPU usage at a glance."
+                    AllowMultiple="true">
+                    <Capabilities>
+                      <Capability>
+                        <Size Name="small" />
+                      </Capability>
+                    </Capabilities>
+                    <ThemeResources>
+                      <Icons>
+                        <Icon Path="ProviderAssets\Widget_Icon.png" />
+                      </Icons>
+                      <Screenshots>
+                        <Screenshot Path="ProviderAssets\Widget_Screenshot.png" DisplayAltText="System Monitor widget showing CPU, memory and GPU usage" />
+                      </Screenshots>
+                      <DarkMode>
+                        <Screenshots>
+                          <Screenshot Path="ProviderAssets\Widget_Screenshot.png" DisplayAltText="System Monitor widget showing CPU, memory and GPU usage" />
+                        </Screenshots>
+                      </DarkMode>
+                      <LightMode>
+                        <Screenshots>
+                          <Screenshot Path="ProviderAssets\Widget_Screenshot_Light.png" DisplayAltText="System Monitor widget showing CPU, memory and GPU usage" />
+                        </Screenshots>
+                      </LightMode>
+                    </ThemeResources>
+                  </Definition>
+                </Definitions>
+              </WidgetProvider>
+            </uap3:Properties>
+          </uap3:AppExtension>
+        </uap3:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>
