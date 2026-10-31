@@ -1,11 +1,11 @@
 # Microsoft Store submission
 
-Checklist and texts for publishing Lock Monitor through Partner Center.
+Checklist and texts for publishing Widget Monitor through Partner Center.
 
 ## 1. Reserve the app and fill in the identity
 
 1. Partner Center → **Apps and games** → **New product** → **MSIX or PWA app** → reserve the name
-   (e.g. *Lock Monitor*).
+   (e.g. *Widget Monitor*).
 2. **Product management → Product identity** shows the values the package must use. Copy them
    into [`store/store-identity.json`](../store/store-identity.json):
 
@@ -47,7 +47,7 @@ min 2.6.4). The Store installs it automatically; nothing has to be bundled.
 
 Paste into **Submission options → Restricted capabilities**:
 
-> Lock Monitor is a Windows widget provider. Widgets for desktop apps are implemented, per the
+> Widget Monitor is a Windows widget provider. Widgets for desktop apps are implemented, per the
 > Windows App SDK documentation ("Implement a widget provider in a win32 app"), as an
 > out-of-process COM server in a packaged Win32 app, which requires runFullTrust. The provider
 > reads system performance information that is only available to full-trust desktop processes:
@@ -72,7 +72,7 @@ Paste into **Submission options → Restricted capabilities**:
 
 **Description**
 
-> Lock Monitor adds a System Monitor widget to Windows 11. Pin it to the Widgets board (Win+W) or
+> Widget Monitor adds a System Monitor widget to Windows 11. Pin it to the Widgets board (Win+W) or
 > add it to your lock screen to see how busy your PC is at a glance.
 >
 > • Small (lock screen): CPU, memory and GPU usage

@@ -1,13 +1,13 @@
-# Lock Monitor — Privacy Policy
+# Widget Monitor — Privacy Policy
 
 _Last updated: 31 October 2026_
 
-Lock Monitor is a Windows widget that shows how busy your PC is. **It does not collect, store,
+Widget Monitor is a Windows widget that shows how busy your PC is. **It does not collect, store,
 sell or send any personal data, and it does not communicate over the network at all.**
 
 ## What the app reads, on your PC only
 
-To draw the widget, Lock Monitor reads system information that Windows provides to any program
+To draw the widget, Widget Monitor reads system information that Windows provides to any program
 running as the signed-in user:
 
 | Information | Used for |
@@ -21,7 +21,7 @@ running as the signed-in user:
 
 These values are only shown on the widget and kept in memory for the next update. Nothing is
 written to disk, and no content of your files, network traffic, browsing or keystrokes is read.
-The app reads information only while a Lock Monitor widget is visible.
+The app reads information only while a Widget Monitor widget is visible.
 
 ## What is stored
 
@@ -29,15 +29,15 @@ The app reads information only while a Lock Monitor widget is visible.
   the GPU temperature) are stored by Windows together with the pinned widget.
 - **A small diagnostic log** of widget events (widget shown/hidden, settings saved, errors) is kept
   on your PC at
-  `%LOCALAPPDATA%\Packages\<Lock Monitor package>\LocalCache\Local\LockMonitor\provider.log`.
+  `%LOCALAPPDATA%\Packages\<Widget Monitor package>\LocalCache\Local\LockMonitor\provider.log`.
   It contains timestamps, widget identifiers and error messages, never the values shown on the
   widget. It is limited to 512 KB and is never sent anywhere.
 
-Uninstalling Lock Monitor removes both.
+Uninstalling Widget Monitor removes both.
 
 ## Sharing
 
-Lock Monitor has no networking code, no analytics, no advertising and no third-party SDKs. No
+Widget Monitor has no networking code, no analytics, no advertising and no third-party SDKs. No
 information leaves your PC.
 
 ## Contact

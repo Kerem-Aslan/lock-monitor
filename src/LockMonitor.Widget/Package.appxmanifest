@@ -14,8 +14,8 @@
     Version="0.1.0.0" />
 
   <Properties>
-    <DisplayName>Lock Monitor</DisplayName>
-    <PublisherDisplayName>Lock Monitor (dev)</PublisherDisplayName>
+    <DisplayName>Widget Monitor</DisplayName>
+    <PublisherDisplayName>Widget Monitor (dev)</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -32,7 +32,7 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="Lock Monitor"
+        DisplayName="Widget Monitor"
         Description="CPU, memory and GPU usage widget for the Widgets board and the lock screen."
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
@@ -44,14 +44,14 @@
         <!-- Out-of-process COM server that implements IWidgetProvider -->
         <com:Extension Category="windows.comServer">
           <com:ComServer>
-            <com:ExeServer Executable="LockMonitor.Widget.exe" Arguments="-RegisterProcessAsComServer" DisplayName="Lock Monitor widget provider">
+            <com:ExeServer Executable="LockMonitor.Widget.exe" Arguments="-RegisterProcessAsComServer" DisplayName="Widget Monitor widget provider">
               <com:Class Id="A1202D97-A23F-4DFA-A3E1-C664383A2ECB" DisplayName="LockMonitorWidgetProvider" />
             </com:ExeServer>
           </com:ComServer>
         </com:Extension>
 
         <uap3:Extension Category="windows.appExtension">
-          <uap3:AppExtension Name="com.microsoft.windows.widgets" DisplayName="Lock Monitor" Id="LockMonitorProvider" PublicFolder="Public">
+          <uap3:AppExtension Name="com.microsoft.windows.widgets" DisplayName="Widget Monitor" Id="LockMonitorProvider" PublicFolder="Public">
             <uap3:Properties>
               <WidgetProvider>
                 <ProviderIcons>

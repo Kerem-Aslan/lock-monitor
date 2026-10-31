@@ -1,4 +1,6 @@
-# Lock Monitor
+# Widget Monitor
+
+> Store name *Widget Monitor*; the code and projects use the codename **LockMonitor**.
 
 A Windows 11 system-monitor widget for the **Widgets board** (Win+W) and the **lock screen**.
 It runs as a packaged (MSIX) out-of-process COM widget provider built with C#/.NET 10 (Native AOT)

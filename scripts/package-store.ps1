@@ -49,6 +49,13 @@ try {
         $manifest.Package.Identity.Publisher = $identity.Publisher
         $manifest.Package.Properties.PublisherDisplayName = $identity.PublisherDisplayName
         $manifest.Package.Properties.DisplayName = $identity.DisplayName
+        # Partner Center also checks the app's visible name against the reserved name.
+        $ns = New-Object Xml.XmlNamespaceManager $manifest.NameTable
+        $ns.AddNamespace('m', 'http://schemas.microsoft.com/appx/manifest/foundation/windows10')
+        $ns.AddNamespace('uap', 'http://schemas.microsoft.com/appx/manifest/uap/windows10')
+        $ns.AddNamespace('uap3', 'http://schemas.microsoft.com/appx/manifest/uap/windows10/3')
+        $manifest.SelectSingleNode('//uap:VisualElements', $ns).SetAttribute('DisplayName', $identity.DisplayName)
+        $manifest.SelectSingleNode('//uap3:AppExtension', $ns).SetAttribute('DisplayName', $identity.DisplayName)
     }
     $manifest.Save($manifestPath)
 

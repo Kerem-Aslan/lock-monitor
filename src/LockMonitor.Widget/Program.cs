@@ -83,10 +83,10 @@ internal static class Program
     private static void ShowHowToAdd()
     {
         const string text =
-            "Lock Monitor runs as a widget.\n\n" +
+            "Widget Monitor runs as a widget.\n\n" +
             "Widgets board: press Win+W, select + (Add widgets) and pick \"System Monitor\".\n\n" +
             "Lock screen: Settings > Personalization > Lock screen > Widgets > Add widget.";
-        User32.MessageBoxW(0, text, "Lock Monitor", User32.MB_OK | User32.MB_ICONINFORMATION);
+        User32.MessageBoxW(0, text, "Widget Monitor", User32.MB_OK | User32.MB_ICONINFORMATION);
     }
 
     private static bool HasArg(string[] args, string name) =>

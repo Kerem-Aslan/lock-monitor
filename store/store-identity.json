@@ -1,8 +1,8 @@
 {
   "_comment": "Copy these from Partner Center > your app > Product management > Product identity. Store builds refuse TODO values.",
-  "IdentityName": "TODO_PARTNER_CENTER_Package/Identity/Name",
-  "Publisher": "CN=TODO_PARTNER_CENTER_Package/Identity/Publisher",
-  "PublisherDisplayName": "TODO_PARTNER_CENTER_Package/Properties/PublisherDisplayName",
-  "DisplayName": "Lock Monitor",
+  "IdentityName": "KeremAslan.WidgetMonitor",
+  "Publisher": "CN=64A76F8A-C11A-409E-B10D-0AC362279BFD",
+  "PublisherDisplayName": "Kerem Aslan",
+  "DisplayName": "Widget Monitor",
   "Version": "1.0.0.0"
 }
