@@ -26,7 +26,17 @@ public sealed record WidgetSettings
     /// <summary>Adapter name (DXGI description), or null for the automatic choice.</summary>
     public string? GpuName { get; init; }
 
+    /// <summary>
+    /// Drives to show, normalized as "C:,D:" (upper case, sorted, unique). null = default (the
+    /// system drive only); "" = no drive rows. Kept as a string so the record keeps value equality.
+    /// </summary>
+    public string? DriveList { get; init; }
+
     public static WidgetSettings Default { get; } = new();
+
+    /// <summary>Drive names to show, in letter order.</summary>
+    public IReadOnlyList<string> SelectedDrives(string systemDrive) =>
+        DriveList is null ? [systemDrive] : SplitDrives(DriveList);
 
     public TimeSpan Interval => TimeSpan.FromSeconds(IntervalSeconds);
 
@@ -46,8 +56,24 @@ public sealed record WidgetSettings
         {
             json["gpu"] = GpuName;
         }
+        if (DriveList is not null)
+        {
+            json["drives"] = DriveList;
+        }
         return json.ToJsonString();
     }
+
+    /// <summary>"d:, c:,C:" → "C:,D:". Anything that is not a drive letter followed by ':' is dropped.</summary>
+    public static string NormalizeDrives(string value) => string.Join(",", SplitDrives(value));
+
+    private static string[] SplitDrives(string value) =>
+    [
+        .. value.Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(d => d.TrimEnd('\\').ToUpperInvariant())
+            .Where(d => d.Length == 2 && char.IsAsciiLetterUpper(d[0]) && d[1] == ':')
+            .Distinct()
+            .Order(StringComparer.Ordinal),
+    ];
 
     /// <summary>Reads CustomState; anything missing or malformed falls back to the defaults.</summary>
     public static WidgetSettings Parse(string? customState)
@@ -67,6 +93,7 @@ public sealed record WidgetSettings
                 IntervalSeconds = NormalizeInterval(ReadInt(json["interval"])),
                 ShowGpuTemperature = ReadBool(json["gpuTemp"]),
                 GpuName = ReadString(json["gpu"]) is { Length: > 0 } gpu && gpu != AutomaticGpu ? gpu : null,
+                DriveList = ReadString(json["drives"]) is { } drives ? NormalizeDrives(drives) : null,
             };
         }
         catch (JsonException)
@@ -104,6 +131,11 @@ public sealed record WidgetSettings
             if (ReadString(json["gpu"]) is { } gpu)
             {
                 result = result with { GpuName = gpu.Length == 0 || gpu == AutomaticGpu ? null : gpu };
+            }
+            // Multi-select ChoiceSet: comma-separated values; "" when every box is unticked.
+            if (ReadString(json["drives"]) is { } drives)
+            {
+                result = result with { DriveList = NormalizeDrives(drives) };
             }
             return result;
         }

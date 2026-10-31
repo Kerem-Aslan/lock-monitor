@@ -119,6 +119,28 @@ public class CardDataTests
         Assert.Equal(CardData.NotAvailable, (string?)details["GPU temp"]["value"]);
     }
 
+    [Fact]
+    public void Each_selected_drive_gets_a_row_missing_drives_are_skipped()
+    {
+        var details = Details(CardData.Build(Sample(), CardSize.Large, new CardOptions(Drives: ["C:", "D:", "E:"])));
+        Assert.Equal("62%", (string?)details["Disk C:"]["value"]);
+        Assert.Equal("90% · 900.0 / 1000.0 GB", (string?)details["Disk D:"]["valueLong"]);
+        Assert.Equal("Attention", (string?)details["Disk D:"]["color"]);
+        Assert.False(details.ContainsKey("Disk E:")); // not attached
+    }
+
+    [Fact]
+    public void No_selected_drive_means_no_disk_rows_and_a_failed_disk_sensor_shows_NA()
+    {
+        var none = Details(CardData.Build(Sample(), CardSize.Medium, new CardOptions(Drives: [])));
+        Assert.DoesNotContain(none.Keys, k => k.StartsWith("Disk", StringComparison.Ordinal));
+
+        var snapshot = Sample();
+        snapshot.Drives = null;
+        var failed = Details(CardData.Build(snapshot, CardSize.Medium, new CardOptions(Drives: ["D:"])));
+        Assert.Equal(CardData.NotAvailable, (string?)failed["Disk D:"]["value"]);
+    }
+
     private static Dictionary<string, JsonNode> Details(string json) =>
         JsonNode.Parse(json)!["details"]!.AsArray().ToDictionary(r => (string)r!["label"]!, r => r!);
 
@@ -133,9 +155,11 @@ public class CardDataTests
             DefaultGpuLuid = Nvidia,
             NetworkDownBytesPerSecond = 1.5 * 1024 * 1024,
             NetworkUpBytesPerSecond = 80 * 1024,
-            SystemDriveName = "C:",
-            SystemDriveUsedBytes = 310UL << 30,
-            SystemDriveTotalBytes = 500UL << 30,
+            Drives =
+            [
+                new DriveReading("C:", "", true, 310UL << 30, 500UL << 30),
+                new DriveReading("D:", "NOIDRIVE", false, 900UL << 30, 1000UL << 30),
+            ],
         };
         var nvidia = s.GetOrAddGpu(Nvidia, "NVIDIA GeForce RTX 4060 Laptop GPU");
         nvidia.UsagePercent = 37;
@@ -198,6 +222,38 @@ public class SettingsTests
     private static readonly GpuAdapterInfo Nvidia = new(1, "NVIDIA GeForce RTX 4060 Laptop GPU", 0x10DE, 8UL << 30, false);
     private static readonly GpuAdapterInfo Intel = new(2, "Intel(R) Graphics", 0x8086, 128UL << 20, false);
 
+    private static readonly DriveReading[] Drives =
+    [
+        new("C:", "", true, 1, 2),
+        new("D:", "NOIDRIVE", false, 1, 2),
+        new("E:", "", false, 1, 2),
+    ];
+
+    [Fact]
+    public void Drive_selection_defaults_to_the_system_drive_and_is_normalized()
+    {
+        Assert.Equal(["C:"], WidgetSettings.Default.SelectedDrives("C:"));
+        Assert.Equal("C:,D:,E:", WidgetSettings.NormalizeDrives(@"d:, c:,C:,x,E:\"));
+
+        var both = WidgetSettings.Default.WithInputs("""{"drives":"D:,C:"}""");
+        Assert.Equal("C:,D:", both.DriveList);
+        Assert.Equal(["C:", "D:"], both.SelectedDrives("C:"));
+        Assert.Equal(both, WidgetSettings.Parse(both.ToJson()));
+
+        var none = both.WithInputs("""{"drives":""}"""); // every box unticked
+        Assert.Empty(none.SelectedDrives("C:"));
+        Assert.Empty(WidgetSettings.Parse(none.ToJson()).SelectedDrives("C:"));
+    }
+
+    [Fact]
+    public void Settings_card_lists_drives_with_labels()
+    {
+        var data = JsonNode.Parse(SettingsCard.BuildData(WidgetSettings.Default, [Nvidia], Nvidia, Drives, "C:"))!;
+        Assert.Equal(["C: (Windows)", "D: NOIDRIVE", "E:"], data["driveChoices"]!.AsArray().Select(c => (string?)c!["title"]));
+        Assert.Equal("C:", (string?)data["drives"]);
+        Assert.True((bool)data["showDrivePicker"]!);
+    }
+
     [Fact]
     public void Defaults_and_round_trip()
     {
@@ -258,12 +314,12 @@ public class SettingsTests
     [Fact]
     public void Settings_card_offers_a_gpu_picker_and_a_note_only_on_hybrid_machines()
     {
-        var single = JsonNode.Parse(SettingsCard.BuildData(WidgetSettings.Default, [Nvidia], Nvidia))!;
+        var single = JsonNode.Parse(SettingsCard.BuildData(WidgetSettings.Default, [Nvidia], Nvidia, Drives, "C:"))!;
         Assert.False((bool)single["showGpuPicker"]!);
         Assert.Equal("true", (string?)single["showGpuTemp"]);
         Assert.Equal("", (string?)single["gpuTempNote"]);
 
-        var hybrid = JsonNode.Parse(SettingsCard.BuildData(WidgetSettings.Default, [Nvidia, Intel], Nvidia))!;
+        var hybrid = JsonNode.Parse(SettingsCard.BuildData(WidgetSettings.Default, [Nvidia, Intel], Nvidia, Drives, "C:"))!;
         Assert.True((bool)hybrid["showGpuPicker"]!);
         Assert.Equal("false", (string?)hybrid["showGpuTemp"]);
         Assert.Equal(SettingsCard.HybridNote, (string?)hybrid["gpuTempNote"]);

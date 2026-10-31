@@ -24,11 +24,11 @@ public sealed class SystemSnapshot
     public double? NetworkDownBytesPerSecond { get; set; }
     public double? NetworkUpBytesPerSecond { get; set; }
 
-    public string? SystemDriveName { get; set; }
-    public ulong? SystemDriveUsedBytes { get; set; }
-    public ulong? SystemDriveTotalBytes { get; set; }
-    public double? SystemDrivePercent =>
-        SystemDriveTotalBytes is > 0 && SystemDriveUsedBytes is { } used ? 100.0 * used / SystemDriveTotalBytes.Value : null;
+    /// <summary>Fixed drives (letter order); null until the disk sensor has run.</summary>
+    public IReadOnlyList<DriveReading>? Drives { get; set; }
+
+    public DriveReading? FindDrive(string name) =>
+        Drives?.FirstOrDefault(d => string.Equals(d.Name, name, StringComparison.OrdinalIgnoreCase));
 
     public GpuReading? FindGpu(long luid) => Gpus.Find(g => g.Luid == luid);
 
@@ -73,4 +73,12 @@ public sealed class GpuReading(long luid, string name)
         MemoryTotalBytes is > 0 && MemoryUsedBytes is { } used ? 100.0 * used / MemoryTotalBytes.Value : null;
 
     public GpuReading Clone() => (GpuReading)MemberwiseClone();
+}
+
+/// <summary>Space on one fixed drive. Immutable, so snapshots can share it.</summary>
+/// <param name="Name">"C:"</param>
+/// <param name="Label">Volume label, may be empty.</param>
+public sealed record DriveReading(string Name, string Label, bool IsSystem, ulong UsedBytes, ulong TotalBytes)
+{
+    public double? Percent => TotalBytes > 0 ? 100.0 * UsedBytes / TotalBytes : null;
 }

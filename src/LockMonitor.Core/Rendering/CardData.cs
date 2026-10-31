@@ -15,7 +15,8 @@ public enum CardSize
 /// <summary>What a single widget chose to show.</summary>
 /// <param name="GpuLuid">Adapter to show; null = the default adapter.</param>
 /// <param name="ShowGpuTemperature">Whether the GPU temperature row is shown (medium/large).</param>
-public sealed record CardOptions(long? GpuLuid = null, bool ShowGpuTemperature = true);
+/// <param name="Drives">Drive names to show ("C:"); null = the system drive.</param>
+public sealed record CardOptions(long? GpuLuid = null, bool ShowGpuTemperature = true, IReadOnlyList<string>? Drives = null);
 
 /// <summary>
 /// Builds the Adaptive Card data payload the templates bind to:
@@ -126,14 +127,26 @@ public static class CardData
                 : NotAvailable;
         rows.Add((JsonNode)Detail("Network", network));
 
-        string driveLabel = s?.SystemDriveName is { Length: > 0 } drive ? $"Disk {drive}" : "Disk";
-        double? diskPercent = s?.SystemDrivePercent;
-        string disk = pending ? Pending : FormatPercent(diskPercent);
-        string diskLong = pending ? Pending
-            : s!.SystemDriveUsedBytes is { } du && s.SystemDriveTotalBytes is { } dt
-                ? $"{FormatPercent(diskPercent)} · {Units.UsedOfTotal(du, dt)}"
-                : NotAvailable;
-        rows.Add((JsonNode)Detail(driveLabel, disk, diskLong, diskPercent, IsHigh(diskPercent)));
+        foreach (var name in options.Drives ?? [Sensors.DriveCatalog.SystemDriveName])
+        {
+            string label = $"Disk {name}";
+            if (pending)
+            {
+                rows.Add((JsonNode)Detail(label, Pending));
+            }
+            else if (s!.Drives is null)
+            {
+                rows.Add((JsonNode)Detail(label, NotAvailable)); // disk sensor unavailable
+            }
+            else if (s.FindDrive(name) is { } drive)
+            {
+                double? percent = drive.Percent;
+                rows.Add((JsonNode)Detail(label, FormatPercent(percent),
+                    $"{FormatPercent(percent)} · {Units.UsedOfTotal(drive.UsedBytes, drive.TotalBytes)}",
+                    percent, IsHigh(percent)));
+            }
+            // A selected drive that is not attached right now is simply left out.
+        }
 
         string ram = pending ? Pending
             : s!.MemoryUsedBytes is { } mu && s.MemoryTotalBytes is { } mt ? Units.UsedOfTotal(mu, mt) : NotAvailable;

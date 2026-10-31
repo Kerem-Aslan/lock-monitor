@@ -281,7 +281,8 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
 
     private CardOptions OptionsOf(WidgetSession s) => new(
         GpuLuid: _adapters.FindByName(s.Settings.GpuName)?.Luid,
-        ShowGpuTemperature: s.Settings.EffectiveShowGpuTemperature(_adapters.IsHybrid));
+        ShowGpuTemperature: s.Settings.EffectiveShowGpuTemperature(_adapters.IsHybrid),
+        Drives: s.Settings.SelectedDrives(DriveCatalog.SystemDriveName));
 
     private void SetActive(string widgetId, bool active, string? reason)
     {
@@ -379,7 +380,8 @@ internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
         {
             if (session.InCustomization)
             {
-                data = SettingsCard.BuildData(session.Settings, _adapters.Adapters, _adapters.Default);
+                data = SettingsCard.BuildData(session.Settings, _adapters.Adapters, _adapters.Default,
+                    DriveCatalog.FixedDrives(), DriveCatalog.SystemDriveName);
                 template = _templates.Settings ?? _templates.Composed;
             }
             else

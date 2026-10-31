@@ -80,7 +80,7 @@ while (Stopwatch.GetElapsedTime(wallAtStart).TotalSeconds < durationSeconds)
         line += $"  T {(g?.TemperatureCelsius is { } t ? Units.Celsius(t) : "N/A"),5}" +
                 $"  VRAM {(g is { MemoryUsedBytes: { } u, MemoryTotalBytes: { } tot } ? Units.UsedOfTotal(u, tot) : "N/A")}" +
                 $"  NET ↓{(snapshot.NetworkDownBytesPerSecond is { } d ? Units.Rate(d) : "N/A")} ↑{(snapshot.NetworkUpBytesPerSecond is { } up ? Units.Rate(up) : "N/A")}" +
-                $"  {snapshot.SystemDriveName} {Pct(snapshot.SystemDrivePercent)}";
+                $"  {string.Join(" ", (snapshot.Drives ?? []).Select(d => $"{d.Name} {d.Percent:0}%"))}";
     }
     Console.WriteLine(line);
     Thread.Sleep(interval);
@@ -121,7 +121,8 @@ if (cardsDir is not null)
     }
     File.WriteAllText(Path.Combine(cardsDir, "data-pending.json"), CardData.Build(null, CardSize.Large));
     File.WriteAllText(Path.Combine(cardsDir, "data-settings.json"),
-        SettingsCard.BuildData(WidgetSettings.Default, adapters.Adapters, adapters.Default));
+        SettingsCard.BuildData(WidgetSettings.Default with { DriveList = "C:,D:" }, adapters.Adapters, adapters.Default,
+            DriveCatalog.FixedDrives(), DriveCatalog.SystemDriveName));
     Console.WriteLine($"Wrote templates and sample data to {Path.GetFullPath(cardsDir)}");
 }
 

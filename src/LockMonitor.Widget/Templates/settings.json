@@ -75,6 +75,22 @@
           "size": "Small",
           "wrap": true,
           "spacing": "None"
+        },
+        {
+          "type": "Input.ChoiceSet",
+          "id": "drives",
+          "label": "Show disks (medium and large sizes)",
+          "$when": "${showDrivePicker}",
+          "isMultiSelect": true,
+          "style": "expanded",
+          "value": "${drives}",
+          "choices": [
+            {
+              "$data": "${driveChoices}",
+              "title": "${title}",
+              "value": "${value}"
+            }
+          ]
         }
       ]
     }
