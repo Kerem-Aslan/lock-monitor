@@ -39,7 +39,13 @@ internal sealed partial class WidgetProviderFactory(Func<IWidgetProvider> getPro
         try
         {
             pProvider = MarshalInspectable<IWidgetProvider>.FromManaged(getProvider());
-            return Marshal.QueryInterface(pProvider, in riid, out ppvObject);
+            int hr = Marshal.QueryInterface(pProvider, in riid, out ppvObject);
+            if (hr < 0)
+            {
+                // E_NOINTERFACE here means the WinRT vtables were not generated (see WidgetProvider remarks).
+                Log.Error($"ClassFactory.CreateInstance: QueryInterface({riid}) failed with 0x{hr:X8}");
+            }
+            return hr;
         }
         catch (Exception ex)
         {

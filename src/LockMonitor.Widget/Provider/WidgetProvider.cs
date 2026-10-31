@@ -9,6 +9,12 @@ namespace LockMonitor.Provider;
 /// widgets are tracked by their host-assigned id. Host callbacks can arrive concurrently on
 /// different RPC threads, so all state changes go through <see cref="_gate"/>.
 /// </summary>
+/// <remarks>
+/// <see cref="WinRT.GeneratedWinRTExposedTypeAttribute"/> asks the CsWinRT source generator for the
+/// WinRT vtables of this class. Without it, Native AOT builds answer E_NOINTERFACE for
+/// IWidgetProvider: CsWinRT only auto-detects such classes in WinUI/UWP projects.
+/// </remarks>
+[WinRT.GeneratedWinRTExposedType]
 internal sealed partial class WidgetProvider : IWidgetProvider, IWidgetProvider2
 {
     public const string SystemMonitorDefinitionId = "SystemMonitor";

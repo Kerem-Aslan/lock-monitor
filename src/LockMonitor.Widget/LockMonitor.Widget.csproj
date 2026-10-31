@@ -29,6 +29,10 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
     <IsAotCompatible>true</IsAotCompatible>
+    <!-- The .NET SDK defaults to an older Windows projection (10.0.26100.57) whose CsWinRT source
+         generator emits no WinRT vtables for WidgetProvider, so under Native AOT the provider
+         answered E_NOINTERFACE for IWidgetProvider. Pin a current projection. -->
+    <WindowsSdkPackageVersion>10.0.26100.87</WindowsSdkPackageVersion>
   </PropertyGroup>
 
   <ItemGroup>

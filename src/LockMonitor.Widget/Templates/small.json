@@ -6,7 +6,7 @@
     {
       "type": "ColumnSet",
       "$data": "${metrics}",
-      "spacing": "Small",
+      "spacing": "None",
       "columns": [
         {
           "type": "Column",
@@ -16,7 +16,7 @@
             {
               "type": "TextBlock",
               "text": "${label}",
-              "size": "Medium",
+              "size": "Default",
               "isSubtle": true
             }
           ]
@@ -29,7 +29,7 @@
             {
               "type": "TextBlock",
               "text": "${value}",
-              "size": "ExtraLarge",
+              "size": "Large",
               "weight": "${weight}",
               "color": "${color}",
               "horizontalAlignment": "Right"
