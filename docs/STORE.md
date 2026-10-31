@@ -37,6 +37,10 @@ min 2.6.4). The Store installs it automatically; nothing has to be bundled.
 
 - **Windows App Certification Kit** (part of the Windows SDK; run as administrator):
   `appcert.exe test -appxpackagepath artifacts\store\x64\...\LockMonitor.Widget_1.0.0.0_x64.msix -reportoutputpath artifacts\wack.xml`
+- Expected WACK result: **all tests pass except the optional "Blocked executables" test**, which
+  flags (1) CreateProcess/ShellExecuteEx, used only to open Task Manager when the card is tapped, and
+  (2) the word "MSBuild" inside CsWinRT error-message strings. Optional tests do not block
+  certification. DPI awareness is declared in `src/LockMonitor.Widget/app.manifest`.
 - Install the test package on a clean machine (sideloading needs Developer Mode or the test
   certificate), add the widget to the Widgets board and the lock screen, resize it, open the
   settings card, and check light/dark themes.
@@ -53,7 +57,9 @@ Paste into **Submission options → Restricted capabilities**:
 > reads system performance information that is only available to full-trust desktop processes:
 > Performance Data Helper counters (CPU, GPU engines, GPU memory, thermal zones), D3DKMT adapter
 > performance data (GPU temperature), GetIfTable2 (network throughput) and
-> NtQuerySystemInformation (per-process CPU time for the "top processes" list). The app does not
+> NtQuerySystemInformation (per-process CPU time for the "top processes" list). Tapping the widget
+> on the Widgets board opens Windows Task Manager (taskmgr.exe), which needs a process launch from
+> a full-trust process. The app does not
 > require administrator rights, installs no drivers or services, has no networking code and does
 > not collect or transmit any data.
 
@@ -89,9 +95,10 @@ Paste into **Submission options → Restricted capabilities**:
 > (ACPI)" is the firmware's thermal zone, not the CPU core temperature, and is hidden on PCs that
 > do not report a live value.
 
-**Screenshots** (Partner Center requires at least one; PNG, 1366×768 or larger): take them with
-the board open in dark and light theme, showing the small, medium and large sizes and the lock
-screen. Recommended: 4 screenshots at 1920×1080.
+**Screenshots** (Partner Center requires at least one; PNG, 1366×768 or larger): upload
+`store/screenshots/*.png` (1920×1080, composed from the captures in `screenshots/` by
+`scripts/make-store-screenshots.ps1`). Native full-screen captures of the board (dark and light) and
+the lock screen would be sharper; add them later.
 
 **Widgets collection:** after the app is live, Microsoft can feature it in the Widgets picker's
 Store collection; request inclusion with the form linked from the Learn page *Implement a widget
